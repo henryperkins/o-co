@@ -51,6 +51,7 @@ export enum ChatModelProviders {
   GROQ = "groq",
   OLLAMA = "ollama",
   LM_STUDIO = "lm-studio",
+  THIRD_PARTY_OPENAI = "3rd party (openai-format)",
   OPENAI_FORMAT = "3rd party (openai-format)",
 }
 
