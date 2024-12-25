@@ -289,7 +289,7 @@ const ModelSettingsComponent: React.FC<ModelSettingsComponentProps> = ({
   onSetDefaultModelKey,
   isEmbeddingModel,
 }) => {
-  const emptyModel: CustomModel = {
+  const emptyModel: ChatCustomModel | EmbeddingCustomModel = {
     name: "",
     provider: providers.length > 0 ? providers[0] : "",
     baseUrl: "",
@@ -299,7 +299,7 @@ const ModelSettingsComponent: React.FC<ModelSettingsComponentProps> = ({
     enableCors: false,
     isEmbeddingModel: isEmbeddingModel,
   };
-  const [newModel, setNewModel] = useState(emptyModel);
+  const [newModel, setNewModel] = useState<ChatCustomModel | EmbeddingCustomModel>(emptyModel);
   const [isAddModelOpen, setIsAddModelOpen] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
 

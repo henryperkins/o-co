@@ -74,13 +74,23 @@ export interface SetChainOptions {
   refreshIndex?: boolean;
 }
 
-export interface CustomModel {
+export interface ChatCustomModel {
   name: string;
   provider: ChatModelProviders;
   baseUrl?: string;
   apiKey?: string;
   enabled: boolean;
-  isEmbeddingModel?: boolean;
+  isBuiltIn?: boolean;
+  enableCors?: boolean;
+  core?: boolean;
+}
+
+export interface EmbeddingCustomModel {
+  name: string;
+  provider: EmbeddingModelProviders;
+  baseUrl?: string;
+  apiKey?: string;
+  enabled: boolean;
   isBuiltIn?: boolean;
   enableCors?: boolean;
   core?: boolean;

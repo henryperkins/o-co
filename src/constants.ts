@@ -134,6 +134,7 @@ export enum EmbeddingModelProviders {
   OLLAMA = "ollama",
   LM_STUDIO = "lm-studio",
   THIRD_PARTY_OPENAI = "3rd party (openai-format)",
+  OPENAI_FORMAT = "openai-format",
 }
 
 export enum EmbeddingModels {
@@ -145,7 +146,7 @@ export enum EmbeddingModels {
   GOOGLE_ENG = "text-embedding-004",
 }
 
-export const BUILTIN_EMBEDDING_MODELS: CustomModel[] = [
+export const BUILTIN_EMBEDDING_MODELS: EmbeddingCustomModel[] = [
   {
     name: EmbeddingModels.OPENAI_EMBEDDING_SMALL,
     provider: EmbeddingModelProviders.OPENAI,
