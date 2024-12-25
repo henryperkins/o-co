@@ -1,4 +1,4 @@
-import { CustomModel } from "@/aiParams";
+import { CustomModel, EmbeddingCustomModel } from "@/types";
 import { RebuildIndexConfirmModal } from "@/components/modals/RebuildIndexConfirmModal";
 import { EmbeddingModelProviders, VAULT_VECTOR_STORE_STRATEGIES } from "@/constants";
 import VectorStoreManager from "@/search/vectorStoreManager";
@@ -19,7 +19,7 @@ interface QASettingsProps {
 const QASettings: React.FC<QASettingsProps> = ({ vectorStoreManager }) => {
   const settings = useSettingsValue();
 
-  const handleUpdateEmbeddingModels = (models: Array<CustomModel>) => {
+  const handleUpdateEmbeddingModels = (models: Array<EmbeddingCustomModel>) => {
     const updatedActiveEmbeddingModels = models.map((model) => ({
       ...model,
       baseUrl: model.baseUrl || "",

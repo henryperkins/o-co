@@ -74,27 +74,7 @@ export interface SetChainOptions {
   refreshIndex?: boolean;
 }
 
-export interface ChatCustomModel {
-  name: string;
-  provider: ChatModelProviders;
-  baseUrl?: string;
-  apiKey?: string;
-  enabled: boolean;
-  isBuiltIn?: boolean;
-  enableCors?: boolean;
-  core?: boolean;
-}
-
-export interface EmbeddingCustomModel {
-  name: string;
-  provider: EmbeddingModelProviders;
-  baseUrl?: string;
-  apiKey?: string;
-  enabled: boolean;
-  isBuiltIn?: boolean;
-  enableCors?: boolean;
-  core?: boolean;
-}
+import { ChatCustomModel, EmbeddingCustomModel } from "@/types";
 
 export function setModelKey(modelKey: string) {
   settingsStore.set(modelKeyAtom, modelKey);

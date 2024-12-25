@@ -1,4 +1,4 @@
-import { CustomModel } from "@/aiParams";
+import { CustomModel, ChatCustomModel } from "@/types";
 import { ChainType } from "@/chainFactory";
 import { ChatModelProviders, DEFAULT_OPEN_AREA } from "@/constants";
 import { setSettings, updateSetting, useSettingsValue } from "@/settings/model";
@@ -14,7 +14,7 @@ import {
 const GeneralSettings: React.FC = () => {
   const settings = useSettingsValue();
 
-  const handleUpdateModels = (models: Array<CustomModel>) => {
+  const handleUpdateModels = (models: Array<ChatCustomModel>) => {
     const updatedActiveModels = models.map((model) => ({
       ...model,
       baseUrl: model.baseUrl || "",

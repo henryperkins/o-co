@@ -7,7 +7,7 @@ import { RunnableSequence } from "@langchain/core/runnables";
 import { BaseChain, RetrievalQAChain } from "langchain/chains";
 import moment from "moment";
 import { TFile, Vault, parseYaml, requestUrl } from "obsidian";
-import { CustomModel } from "@/aiParams";
+import { CustomModel, ChatCustomModel, EmbeddingCustomModel } from "@/types";
 
 export const getModelNameFromKey = (modelKey: string): string => {
   return modelKey.split("|")[0];
@@ -628,7 +628,10 @@ export function omit<T extends Record<string, any>, K extends keyof T>(
   return result;
 }
 
-export function findCustomModel(modelKey: string, activeModels: CustomModel[]): CustomModel {
+export function findCustomModel(
+  modelKey: string,
+  activeModels: Array<ChatCustomModel | EmbeddingCustomModel>
+): ChatCustomModel | EmbeddingCustomModel {
   const [modelName, provider] = modelKey.split("|");
   const model = activeModels.find((m) => m.name === modelName && m.provider === provider);
   if (!model) {

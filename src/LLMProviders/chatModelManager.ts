@@ -1,4 +1,4 @@
-import { CustomModel, getModelKey, ModelConfig, setModelKey } from "@/aiParams";
+import { CustomModel, ChatCustomModel, getModelKey, ModelConfig, setModelKey } from "@/types";
 import { BUILTIN_CHAT_MODELS, ChatModelProviders } from "@/constants";
 import { getDecryptedKey } from "@/encryptionService";
 import { getSettings, subscribeToSettingsChange, updateSetting } from "@/settings/model";
@@ -380,7 +380,7 @@ export default class ChatModelManager {
     });
   }
 
-  getProviderConstructor(model: CustomModel): ChatConstructorType {
+  getProviderConstructor(model: ChatCustomModel): ChatConstructorType {
     const constructor: ChatConstructorType =
       CHAT_PROVIDER_CONSTRUCTORS[model.provider as ChatModelProviders];
     if (!constructor) {
@@ -397,7 +397,7 @@ export default class ChatModelManager {
     return ChatModelManager.chatModel;
   }
 
-  setChatModel(model: CustomModel): void {
+  setChatModel(model: ChatCustomModel): void {
     const modelKey = `${model.name}|${model.provider}`;
     if (!ChatModelManager.modelMap.hasOwnProperty(modelKey)) {
       throw new Error(`No model found for: ${modelKey}`);

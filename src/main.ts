@@ -1,7 +1,7 @@
 import { BrevilabsClient } from "@/LLMProviders/brevilabsClient";
 import ChainManager from "@/LLMProviders/chainManager";
 import EmbeddingsManager from "@/LLMProviders/embeddingManager";
-import { CustomModel } from "@/aiParams";
+import { CustomModel, ChatCustomModel } from "@/types";
 import { parseChatContent, updateChatMemory } from "@/chatUtils";
 import { registerBuiltInCommands } from "@/commands";
 import CopilotView from "@/components/CopilotView";
@@ -566,9 +566,9 @@ export default class CopilotPlugin extends Plugin {
   }
 
   mergeActiveModels(
-    existingActiveModels: CustomModel[],
-    builtInModels: CustomModel[]
-  ): CustomModel[] {
+    existingActiveModels: ChatCustomModel[],
+    builtInModels: ChatCustomModel[]
+  ): ChatCustomModel[] {
     const modelMap = new Map<string, CustomModel>();
 
     // Create a unique key for each model, it's model (name + provider)

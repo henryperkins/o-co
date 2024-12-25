@@ -1,4 +1,4 @@
-import { CustomModel, getModelKey } from "@/aiParams";
+import { CustomModel, EmbeddingCustomModel, getModelKey } from "@/types";
 import { EmbeddingModelProviders, ChatModelProviders } from "@/constants";
 import { getDecryptedKey } from "@/encryptionService";
 import { CustomError } from "@/error";
@@ -79,7 +79,7 @@ export default class EmbeddingManager {
     return EmbeddingManager.instance;
   }
 
-  getProviderConstructor(model: CustomModel): EmbeddingConstructorType {
+  getProviderConstructor(model: EmbeddingCustomModel): EmbeddingConstructorType {
     const constructor = EMBEDDING_PROVIDER_CONSTRUCTORS[model.provider as EmbeddingModelProviders];
     if (!constructor) {
       console.warn(`Unknown provider: ${model.provider} for model: ${model.name}`);
@@ -160,7 +160,7 @@ export default class EmbeddingManager {
     }
   }
 
-  private getModelConfig(modelKey: string, customModel: CustomModel): any {
+  private getModelConfig(modelKey: string, customModel: EmbeddingCustomModel): any {
     const settings = getSettings();
     const modelName = customModel.name;
 

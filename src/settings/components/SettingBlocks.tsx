@@ -1,4 +1,4 @@
-import { CustomModel } from "@/aiParams";
+import { CustomModel, ChatCustomModel, EmbeddingCustomModel } from "@/types";
 import ChatModelManager from "@/LLMProviders/chatModelManager";
 import EmbeddingManager from "@/LLMProviders/embeddingManager";
 import { App, Notice } from "obsidian";
@@ -297,7 +297,6 @@ const ModelSettingsComponent: React.FC<ModelSettingsComponentProps> = ({
     enabled: true,
     isBuiltIn: false,
     enableCors: false,
-    isEmbeddingModel: isEmbeddingModel,
   };
   const [newModel, setNewModel] = useState<ChatCustomModel | EmbeddingCustomModel>(emptyModel);
   const [isAddModelOpen, setIsAddModelOpen] = useState(false);
