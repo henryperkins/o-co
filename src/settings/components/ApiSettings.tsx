@@ -1,8 +1,9 @@
-import { updateSetting, useSettingsValue } from "@/settings/model";
+import { AzureOpenAIDeployment } from "@/types";
+import { updateModelConfig } from "@/aiParams";
+import { updateSetting, useSettingsValue, validateDeployment } from "@/settings/model";
 import React, { useEffect, useState } from "react";
 import ApiSetting from "./ApiSetting";
 import Collapsible from "./Collapsible";
-import { AzureOpenAIDeployment, updateModelConfig } from "@/aiParams";
 import { Notice } from "obsidian";
 
 export const ApiSettings: React.FC = () => {
@@ -10,14 +11,15 @@ export const ApiSettings: React.FC = () => {
   const [azureDeployments, setAzureDeployments] = useState<AzureOpenAIDeployment[]>(
     settings.azureOpenAIApiDeployments || []
   );
-  const deployment: AzureOpenAIDeployment = settings.azureOpenAIApiDeployments?.[0] || {
+
+  const [defaultAzureDeployment, setDefaultAzureDeployment] = useState<AzureOpenAIDeployment>({
     deploymentName: "",
     instanceName: "",
     apiKey: "",
     apiVersion: "",
-  };
-  const [defaultAzureDeployment, setDefaultAzureDeployment] =
-    useState<AzureOpenAIDeployment>(deployment);
+    isEnabled: true
+  });
+
   const [selectedModel] = useState<string>(settings.defaultModelKey);
   const [modelProvider] = useState<string>("openai");
   const [maxCompletionTokens, setMaxCompletionTokens] = useState<number | undefined>(undefined);
@@ -40,56 +42,30 @@ export const ApiSettings: React.FC = () => {
     setAzureDeployments(settings.azureOpenAIApiDeployments || []);
   }, [settings.azureOpenAIApiDeployments]);
 
-  const validateAzureDeployment = (deployment: AzureOpenAIDeployment): boolean => {
-    return (
-      deployment.deploymentName.trim() !== "" &&
-      deployment.instanceName.trim() !== "" &&
-      deployment.apiKey.trim() !== "" &&
-      deployment.apiVersion.trim() !== ""
-    );
-  };
-
-  const handleAddAzureDeployment = () => {
-    if (!validateAzureDeployment(defaultAzureDeployment)) {
+  const handleAddAzureDeployment = async () => {
+    if (!validateDeployment(defaultAzureDeployment)) {
       new Notice("All Azure OpenAI deployment fields are required");
       return;
     }
 
-    // Check for duplicate deployment names
-    if (azureDeployments.some((d) => d.deploymentName === defaultAzureDeployment.deploymentName)) {
-      new Notice("A deployment with this name already exists");
-      return;
-    }
+    const newDeployment = { ...defaultAzureDeployment, isEnabled: true };
+    await addAzureDeployment(newDeployment);
 
-    const updatedDeployments = [...azureDeployments, defaultAzureDeployment];
-    setAzureDeployments(updatedDeployments);
-    updateSetting("azureOpenAIApiDeployments", updatedDeployments);
-
-    // Reset form
     setDefaultAzureDeployment({
       deploymentName: "",
       instanceName: "",
       apiKey: "",
       apiVersion: "",
+      isEnabled: true
     });
   };
 
-  const handleUpdateAzureDeployment = (index: number, deployment: AzureOpenAIDeployment) => {
-    if (!validateAzureDeployment(deployment)) {
-      new Notice("All Azure OpenAI deployment fields are required");
-      return;
-    }
-
-    const updatedDeployments = [...azureDeployments];
-    updatedDeployments[index] = deployment;
-    setAzureDeployments(updatedDeployments);
-    updateSetting("azureOpenAIApiDeployments", updatedDeployments);
+  const handleUpdateAzureDeployment = async (index: number, deployment: AzureOpenAIDeployment) => {
+    await updateAzureDeployment(index, deployment);
   };
 
-  const handleRemoveAzureDeployment = (index: number) => {
-    const updatedDeployments = azureDeployments.filter((_, i) => i !== index);
-    setAzureDeployments(updatedDeployments);
-    updateSetting("azureOpenAIApiDeployments", updatedDeployments);
+  const handleRemoveAzureDeployment = async (index: number) => {
+    await removeAzureDeployment(index);
   };
 
   const handleMaxCompletionTokensChange = (value: number) => {
