@@ -43,7 +43,7 @@ export enum ChatModels {
 // Model Providers
 export enum ChatModelProviders {
   OPENAI = "openai",
-  AZURE_OPENAI = "azure_openai", // Changed to match EmbeddingModelProviders
+  AZURE_OPENAI = "azure_openai",
   ANTHROPIC = "anthropic",
   COHEREAI = "cohereai",
   GOOGLE = "google",
@@ -52,7 +52,7 @@ export enum ChatModelProviders {
   OLLAMA = "ollama",
   LM_STUDIO = "lm-studio",
   THIRD_PARTY_OPENAI = "3rd party (openai-format)",
-  OPENAI_FORMAT = "openai-format" // Remove duplicate
+  OPENAI_FORMAT = "openai-format"
 }
 
 export enum EmbeddingModelProviders {
