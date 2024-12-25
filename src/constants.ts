@@ -1,6 +1,8 @@
 import { ChatCustomModel } from "@/types";
 import { type CopilotSettings } from "@/settings/model";
 import { ChainType } from "./chainFactory";
+import { CustomModel } from "@/types";
+import { EmbeddingCustomModel } from "@/types";
 
 export const BREVILABS_API_BASE_URL = "https://api.brevilabs.com/v1";
 export const CHAT_VIEWTYPE = "copilot-chat-view";
@@ -55,15 +57,15 @@ export enum ChatModelProviders {
 }
 
 export enum EmbeddingModelProviders {
-  COPILOT_PLUS = "copilot-plus",
   OPENAI = "openai",
   COHEREAI = "cohereai",
   GOOGLE = "google",
-  AZURE_OPENAI = "azure_openai", // Note the underscore
+  AZURE_OPENAI = "azure_openai",
   OLLAMA = "ollama",
   LM_STUDIO = "lm-studio",
   THIRD_PARTY_OPENAI = "3rd party (openai-format)",
   OPENAI_FORMAT = "openai-format",
+  COPILOT_PLUS = "copilot-plus",
 }
 
 export const BUILTIN_CHAT_MODELS: ChatCustomModel[] = [
@@ -146,19 +148,6 @@ export const BUILTIN_CHAT_MODELS: ChatCustomModel[] = [
   },
 ];
 
-export enum EmbeddingModelProviders {
-  OPENAI = "openai",
-  COHEREAI = "cohereai",
-  GOOGLE = "google",
-  AZURE_OPENAI = "azure_openai",
-  OLLAMA = "ollama",
-  LM_STUDIO = "lm-studio",
-  OPENAI_FORMAT = "3rd party (openai-format)",
-  COPILOT_PLUS = "copilot-plus",
-  // HUGGINGFACE = "huggingface",
-  // VOYAGEAI = "voyageai",
-}
-
 export enum EmbeddingModels {
   OPENAI_EMBEDDING_ADA_V2 = "text-embedding-ada-002",
   OPENAI_EMBEDDING_SMALL = "text-embedding-3-small",
@@ -183,6 +172,7 @@ export const BUILTIN_EMBEDDING_MODELS: CustomModel[] = [
     provider: EmbeddingModelProviders.OPENAI,
     enabled: true,
     isBuiltIn: true,
+    isEmbeddingModel: true,
     core: true,
   },
   {
@@ -190,24 +180,28 @@ export const BUILTIN_EMBEDDING_MODELS: CustomModel[] = [
     provider: EmbeddingModelProviders.OPENAI,
     enabled: true,
     isBuiltIn: true,
+    isEmbeddingModel: true,
   },
   {
     name: EmbeddingModels.COHEREAI_EMBED_MULTILINGUAL_LIGHT_V3_0,
     provider: EmbeddingModelProviders.COHEREAI,
     enabled: true,
     isBuiltIn: true,
+    isEmbeddingModel: true,
   },
   {
     name: EmbeddingModels.GOOGLE_ENG,
     provider: EmbeddingModelProviders.GOOGLE,
     enabled: true,
     isBuiltIn: true,
+    isEmbeddingModel: true,
   },
   {
     name: EmbeddingModels.AZURE_OPENAI,
     provider: EmbeddingModelProviders.AZURE_OPENAI,
     enabled: true,
     isBuiltIn: true,
+    isEmbeddingModel: true,
   },
 ];
 
@@ -296,7 +290,9 @@ export const DEFAULT_SETTINGS: CopilotSettings = {
   maxSourceChunks: 3,
   groqApiKey: "",
   activeModels: BUILTIN_CHAT_MODELS,
-  activeEmbeddingModels: BUILTIN_EMBEDDING_MODELS,
+  activeEmbeddingModels: BUILTIN_EMBEDDING_MODELS.filter(
+    (model) => model.isEmbeddingModel
+  ) as EmbeddingCustomModel[],
   embeddingRequestsPerSecond: 10,
   disableIndexOnMobile: true,
   showSuggestedPrompts: true,

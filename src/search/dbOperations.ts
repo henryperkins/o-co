@@ -453,7 +453,6 @@ export class DBOperations {
     const prevEmbeddingModel = singleDoc.hits[0]?.document?.embeddingModel;
 
     if (prevEmbeddingModel) {
-      // Fix: Remove the third argument as the function only accepts two
       if (!areEmbeddingModelsSame(prevEmbeddingModel, currentEmbeddingModelKey)) {
         new Notice("New embedding model detected. Rebuilding index...");
         console.log("Embedding model changed, rebuilding index");

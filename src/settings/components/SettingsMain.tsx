@@ -3,7 +3,7 @@ import CopilotPlugin from "@/main";
 import { resetSettings } from "@/settings/model";
 import React from "react";
 import AdvancedSettings from "./AdvancedSettings";
-import ApiSettings from "./ApiSettings";
+import { ApiSettings } from "./ApiSettings";
 import CopilotPlusSettings from "./CopilotPlusSettings";
 import GeneralSettings from "./GeneralSettings";
 import QASettings from "./QASettings";

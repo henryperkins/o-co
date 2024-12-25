@@ -9,6 +9,7 @@ import { GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
 import { OllamaEmbeddings } from "@langchain/ollama";
 import { OpenAIEmbeddings } from "@langchain/openai";
 import { Notice } from "obsidian";
+import { BREVILABS_API_BASE_URL } from "@/constants";
 
 type EmbeddingConstructorType = new (config: any) => Embeddings;
 
@@ -37,18 +38,18 @@ export default class EmbeddingManager {
       EmbeddingConstructor: EmbeddingConstructorType;
       vendor: EmbeddingModelProviders;
     }
-  >;
+  > = {};
 
   private readonly providerApiKeyMap: Record<EmbeddingModelProviders, () => string> = {
-    [EmbeddingModelProviders.COPILOT_PLUS]: () => getSettings().plusLicenseKey,
     [EmbeddingModelProviders.OPENAI]: () => getSettings().openAIApiKey,
     [EmbeddingModelProviders.COHEREAI]: () => getSettings().cohereApiKey,
     [EmbeddingModelProviders.GOOGLE]: () => getSettings().googleApiKey,
     [EmbeddingModelProviders.AZURE_OPENAI]: () => getSettings().azureOpenAIApiKey,
     [EmbeddingModelProviders.OLLAMA]: () => "default-key",
     [EmbeddingModelProviders.LM_STUDIO]: () => "default-key",
-    [EmbeddingModelProviders.OPENAI_FORMAT]: () => "",
     [EmbeddingModelProviders.THIRD_PARTY_OPENAI]: () => "",
+    [EmbeddingModelProviders.OPENAI_FORMAT]: () => "",
+    [EmbeddingModelProviders.COPILOT_PLUS]: () => getSettings().plusLicenseKey,
   } as const;
 
   private constructor() {
@@ -230,6 +231,19 @@ export default class EmbeddingManager {
         },
       },
     };
+
+    const azureDeployment = settings.azureOpenAIApiDeployments?.[0];
+    if (azureDeployment) {
+      const azureConfig = providerConfig[EmbeddingModelProviders.AZURE_OPENAI];
+      if (azureConfig) {
+        azureConfig.azureOpenAIApiKey = getDecryptedKey(azureDeployment.apiKey);
+        azureConfig.azureOpenAIApiInstanceName = azureDeployment.instanceName;
+        azureConfig.azureOpenAIApiDeploymentName = azureDeployment.deploymentName;
+        azureConfig.azureOpenAIApiVersion = azureDeployment.apiVersion;
+      }
+    } else {
+      console.error("Azure deployment is undefined. Please check your settings.");
+    }
 
     const selectedProviderConfig =
       providerConfig[customModel.provider as EmbeddingModelProviders] || {};

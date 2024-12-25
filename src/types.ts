@@ -41,6 +41,8 @@ export interface CustomEmbeddingModel {
   apiKey?: string;
   baseUrl?: string;
   enableCors?: boolean;
+  isBuiltIn?: boolean;
+  core?: boolean;
 }
 
 /**
@@ -53,6 +55,8 @@ export interface CustomChatModel {
   apiKey?: string;
   baseUrl?: string;
   enableCors?: boolean;
+  isBuiltIn?: boolean;
+  core?: boolean;
 }
 
 /**
@@ -67,6 +71,7 @@ export interface CustomModel {
   enableCors?: boolean;
   isBuiltIn?: boolean;
   core?: boolean;
+  isEmbeddingModel?: boolean;
 }
 
 export interface ModelConfig {
@@ -147,4 +152,5 @@ export enum EmbeddingModelProviders {
   LM_STUDIO = "lm-studio",
   THIRD_PARTY_OPENAI = "3rd party (openai-format)",
   OPENAI_FORMAT = "openai-format",
+  COPILOT_PLUS = "copilot-plus",
 }

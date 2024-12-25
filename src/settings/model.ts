@@ -10,6 +10,9 @@ import {
   DEFAULT_SYSTEM_PROMPT,
 } from "@/constants";
 
+import { AzureOpenAIDeployment } from "@/aiParams";
+import { EmbeddingModelProviders } from "@/types";
+
 export { DEFAULT_SETTINGS };
 
 export type { AzureOpenAIDeployment };
@@ -133,6 +136,7 @@ export function resetSettings(): void {
     activeEmbeddingModels: BUILTIN_EMBEDDING_MODELS.map((model) => ({
       ...model,
       enabled: true,
+      provider: model.provider as EmbeddingModelProviders, // Ensure the provider is of type EmbeddingModelProviders
     })),
   };
   setSettings(defaultSettingsWithBuiltIns);
@@ -228,4 +232,3 @@ function mergeActiveModels(
 
   return Array.from(modelMap.values());
 }
-import { AzureOpenAIDeployment } from "@/aiParams";

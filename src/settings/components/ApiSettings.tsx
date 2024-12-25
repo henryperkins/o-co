@@ -5,7 +5,7 @@ import Collapsible from "./Collapsible";
 import { AzureOpenAIDeployment, updateModelConfig } from "@/aiParams";
 import { Notice } from "obsidian";
 
-const ApiSettings: React.FC = () => {
+export const ApiSettings: React.FC = () => {
   const settings = useSettingsValue();
   const [azureDeployments, setAzureDeployments] = useState<AzureOpenAIDeployment[]>(
     settings.azureOpenAIApiDeployments || []
@@ -407,5 +407,3 @@ const ApiSettings: React.FC = () => {
     </div>
   );
 };
-
-export default ApiSettings;

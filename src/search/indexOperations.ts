@@ -8,6 +8,8 @@ import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import { App, Notice, TFile } from "obsidian";
 import { DBOperations } from "./dbOperations";
 import { extractAppIgnoreSettings, getFilePathsForQA } from "./searchUtils";
+import { CustomError } from "@/error";
+import { Embeddings } from "@langchain/core/embeddings";
 
 const EMBEDDING_BATCH_SIZE = 50;
 const CHECKPOINT_INTERVAL = 4 * EMBEDDING_BATCH_SIZE;

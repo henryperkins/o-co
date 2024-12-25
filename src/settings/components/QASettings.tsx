@@ -1,6 +1,10 @@
 import { EmbeddingCustomModel } from "@/types";
 import { RebuildIndexConfirmModal } from "@/components/modals/RebuildIndexConfirmModal";
-import { EmbeddingModelProviders, VAULT_VECTOR_STORE_STRATEGIES } from "@/constants";
+import {
+  EmbeddingModelProviders,
+  VAULT_VECTOR_STORE_STRATEGIES,
+  ChatModelProviders,
+} from "@/constants";
 import VectorStoreManager from "@/search/vectorStoreManager";
 import { updateSetting, useSettingsValue } from "@/settings/model";
 import React from "react";
@@ -65,7 +69,10 @@ const QASettings: React.FC<QASettingsProps> = ({ vectorStoreManager }) => {
         app={app}
         activeModels={settings.activeEmbeddingModels}
         onUpdateModels={handleUpdateEmbeddingModels}
-        providers={Object.values(EmbeddingModelProviders)}
+        providers={[
+          ...Object.values(EmbeddingModelProviders),
+          ...Object.values(ChatModelProviders),
+        ]}
         onDeleteModel={(modelKey) => {
           const updatedActiveEmbeddingModels = settings.activeEmbeddingModels.filter(
             (model) => `${model.name}|${model.provider}` !== modelKey
