@@ -1,4 +1,4 @@
-import { CustomModel } from "@/aiParams";
+import { CustomModel, ChatCustomModel, EmbeddingCustomModel } from "@/types";
 import { atom, createStore, useAtomValue } from "jotai";
 
 import { type ChainType } from "@/chainFactory";
@@ -81,8 +81,8 @@ export interface CopilotSettings {
   qaInclusions: string;
   groqApiKey: string;
   enabledCommands: Record<string, { enabled: boolean; name: string }>;
-  activeModels: Array<CustomModel>;
-  activeEmbeddingModels: Array<CustomModel>;
+  activeModels: Array<ChatCustomModel>;
+  activeEmbeddingModels: Array<EmbeddingCustomModel>;
   promptUsageTimestamps: Record<string, number>;
   embeddingRequestsPerSecond: number;
   defaultOpenArea: DEFAULT_OPEN_AREA;
