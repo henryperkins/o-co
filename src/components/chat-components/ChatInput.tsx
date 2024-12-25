@@ -1,4 +1,5 @@
-import { CustomModel, useChainType, useModelKey } from "@/aiParams";
+import { CustomModel } from "@/types";
+import { useChainType, useModelKey } from "@/aiParams";
 import { ChainType } from "@/chainFactory";
 import { AddImageModal } from "@/components/modals/AddImageModal";
 import { ListPromptModal } from "@/components/modals/ListPromptModal";

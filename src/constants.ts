@@ -1,4 +1,4 @@
-import { CustomModel } from "@/aiParams";
+import { CustomModel } from "@/types";
 import { type CopilotSettings } from "@/settings/model";
 import { ChainType } from "./chainFactory";
 

@@ -69,3 +69,51 @@ export interface CustomModel {
   isBuiltIn?: boolean;
   core?: boolean;
 }
+export interface ChatCustomModel {
+  name: string;
+  provider: string;
+  enabled: boolean;
+  apiKey?: string;
+  baseUrl?: string;
+  enableCors?: boolean;
+}
+
+export interface EmbeddingCustomModel {
+  name: string;
+  provider: string;
+  enabled: boolean;
+  apiKey?: string;
+  baseUrl?: string;
+  enableCors?: boolean;
+}
+
+export function getModelKey(model: ChatCustomModel | EmbeddingCustomModel): string {
+  return `${model.name}|${model.provider}`;
+}
+
+export interface ModelConfig {
+  modelName: string;
+  temperature: number;
+  streaming: boolean;
+  maxRetries: number;
+  maxConcurrency: number;
+  maxTokens?: number;
+  openAIApiKey?: string;
+  openAIOrgId?: string;
+  anthropicApiKey?: string;
+  cohereApiKey?: string;
+  azureOpenAIApiKey?: string;
+  azureOpenAIApiInstanceName?: string;
+  azureOpenAIApiDeploymentName?: string;
+  azureOpenAIApiVersion?: string;
+  apiKey?: string;
+  openAIProxyBaseUrl?: string;
+  groqApiKey?: string;
+  enableCors?: boolean;
+  maxCompletionTokens?: number;
+  reasoningEffort?: number;
+}
+
+export function setModelKey(modelKey: string): void {
+  // Implementation placeholder
+}
