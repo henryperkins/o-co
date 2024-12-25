@@ -167,7 +167,7 @@ export default class ChainManager {
   ): Promise<void> {
     if (!this.chatModelManager.validateChatModel(this.chatModelManager.getChatModel())) {
       console.error("setChain failed: No chat model set.");
-      return { embeddingsAPI, db };
+      return;
     }
 
     this.validateChainType(chainType);
