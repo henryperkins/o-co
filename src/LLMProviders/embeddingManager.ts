@@ -194,6 +194,21 @@ export default class EmbeddingManager {
         };
       }
 
+      if (deployment) {
+        return {
+          ...baseConfig,
+          modelName: modelName,
+          azureOpenAIApiKey: getDecryptedKey(deployment.apiKey),
+          azureOpenAIApiInstanceName: deployment.instanceName,
+          azureOpenAIApiDeploymentName: deployment.deploymentName,
+          azureOpenAIApiVersion: deployment.apiVersion,
+          configuration: {
+            baseURL: customModel.baseUrl,
+            fetch: customModel.enableCors ? safeFetch : undefined,
+          },
+        };
+      }
+
       // Fallback to default Azure settings if no deployment found
       return {
         ...baseConfig,

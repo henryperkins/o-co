@@ -85,11 +85,9 @@ export interface EmbeddingCustomModel {
   apiKey?: string;
   baseUrl?: string;
   enableCors?: boolean;
+  isBuiltIn?: boolean; // Add this property
 }
 
-export function getModelKey(model: ChatCustomModel | EmbeddingCustomModel): string {
-  return `${model.name}|${model.provider}`;
-}
 
 export interface ModelConfig {
   modelName: string;

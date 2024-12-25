@@ -52,6 +52,7 @@ export default class ChatModelManager {
     [ChatModelProviders.OLLAMA]: () => "default-key",
     [ChatModelProviders.LM_STUDIO]: () => "default-key",
     [ChatModelProviders.OPENAI_FORMAT]: () => "default-key",
+    [ChatModelProviders.THIRD_PARTY_OPENAI]: () => "default-key", // Add this entry
   } as const;
 
   private constructor() {
@@ -441,7 +442,8 @@ export default class ChatModelManager {
   private validateCurrentModel(): void {
     if (!ChatModelManager.chatModel) return;
 
-    const currentModelKey = getModelKey(customModel); // Pass the appropriate model object
+    const settings = getSettings();
+    const currentModelKey = getModelKey(settings.activeModels[0]); // Use the first active model
     if (!currentModelKey) return;
 
     // Get the model configuration

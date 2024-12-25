@@ -43,7 +43,7 @@ export enum ChatModels {
 // Model Providers
 export enum ChatModelProviders {
   OPENAI = "openai",
-  AZURE_OPENAI = "azure openai",
+  AZURE_OPENAI = "azure_openai", // Changed to match EmbeddingModelProviders
   ANTHROPIC = "anthropic",
   COHEREAI = "cohereai",
   GOOGLE = "google",
@@ -52,8 +52,18 @@ export enum ChatModelProviders {
   OLLAMA = "ollama",
   LM_STUDIO = "lm-studio",
   THIRD_PARTY_OPENAI = "3rd party (openai-format)",
-  OPENAI_FORMAT = "openai-format",
-  OPENAI_FORMAT = "3rd party (openai-format)",
+  OPENAI_FORMAT = "openai-format" // Remove duplicate
+}
+
+export enum EmbeddingModelProviders {
+  OPENAI = "openai",
+  COHEREAI = "cohereai",
+  GOOGLE = "google",
+  AZURE_OPENAI = "azure_openai",
+  OLLAMA = "ollama",
+  LM_STUDIO = "lm-studio",
+  THIRD_PARTY_OPENAI = "3rd party (openai-format)",
+  OPENAI_FORMAT = "openai-format"
 }
 
 export const BUILTIN_CHAT_MODELS: CustomModel[] = [
