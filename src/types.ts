@@ -114,9 +114,6 @@ export interface ModelConfig {
   reasoningEffort?: number;
 }
 
-export function setModelKey(modelKey: string): void {
-  // Implementation placeholder
-}
 export interface ChatCustomModel {
   name: string;
   provider: string;
