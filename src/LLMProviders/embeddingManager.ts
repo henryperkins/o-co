@@ -82,9 +82,9 @@ export default class EmbeddingManager {
   }
 
   getProviderConstructor(model: EmbeddingCustomModel): EmbeddingConstructorType {
-    const constructor = EMBEDDING_PROVIDER_CONSTRUCTORS[model.provider as EmbeddingModelProviders];
+    const provider = model.provider as EmbeddingModelProviders;
+    const constructor = EMBEDDING_PROVIDER_CONSTRUCTORS[provider];
     if (!constructor) {
-      console.warn(`Unknown provider: ${model.provider} for model: ${model.name}`);
       throw new Error(`Unknown provider: ${model.provider} for model: ${model.name}`);
     }
     return constructor;
