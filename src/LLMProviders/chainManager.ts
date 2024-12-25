@@ -208,7 +208,6 @@ export default class ChainManager {
           memory: memory,
           prompt: options?.prompt || chatPrompt,
           abortController: options?.abortController,
-          abortController: options?.abortController,
         }) as RunnableSequence;
 
         setChainType(ChainType.LLM_CHAIN);
@@ -324,7 +323,7 @@ export default class ChainManager {
   /**
    * Initializes QA chain, applying Azure-specific settings if necessary.
    */
-  public async initializeQAChain(options?: { refreshIndex: boolean }): Promise<{ embeddingsAPI: Embeddings; db: any }> {
+  public async initializeQAChain(options?: { refreshIndex: boolean }): Promise<{ embeddingsAPI: any; db: any }> {
     const embeddingsAPI = this.embeddingsManager.getEmbeddingsAPI();
     if (!embeddingsAPI) {
       throw new Error("Error getting embeddings API. Please check your settings.");
@@ -362,6 +361,10 @@ export default class ChainManager {
       }
     }
 
+    const embeddingsAPI = this.embeddingsManager.getEmbeddingsAPI();
+    if (!embeddingsAPI) {
+      throw new Error("Error getting embeddings API. Please check your settings.");
+    }
     const db = await this.vectorStoreManager.getOrInitializeDb(embeddingsAPI);
 
     // Handle index refresh if needed
@@ -416,6 +419,7 @@ export default class ChainManager {
       }
 
       this.setChain(getChainType(), {
+        refreshIndex: false,
         prompt: effectivePrompt,
       });
     }
