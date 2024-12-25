@@ -26,15 +26,15 @@ export interface EmbeddingModelConfig {
     fetch?: typeof fetch;
   };
 }
-const EMBEDDING_PROVIDER_CONSTRUCTORS = {
+const EMBEDDING_PROVIDER_CONSTRUCTORS: Record<EmbeddingModelProviders, EmbeddingConstructorType> = {
   [EmbeddingModelProviders.OPENAI]: OpenAIEmbeddings,
   [EmbeddingModelProviders.COHEREAI]: CohereEmbeddings,
   [EmbeddingModelProviders.GOOGLE]: GoogleGenerativeAIEmbeddings,
   [EmbeddingModelProviders.AZURE_OPENAI]: OpenAIEmbeddings,
   [EmbeddingModelProviders.OLLAMA]: OllamaEmbeddings,
   [EmbeddingModelProviders.LM_STUDIO]: OpenAIEmbeddings,
-  [EmbeddingModelProviders.OPENAI_FORMAT]: OpenAIEmbeddings,
   [EmbeddingModelProviders.THIRD_PARTY_OPENAI]: OpenAIEmbeddings,
+  [EmbeddingModelProviders.OPENAI_FORMAT]: OpenAIEmbeddings
 } as const;
 
 type EmbeddingProviderConstructorMap = typeof EMBEDDING_PROVIDER_CONSTRUCTORS;
