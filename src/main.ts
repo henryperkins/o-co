@@ -569,7 +569,7 @@ export default class CopilotPlugin extends Plugin {
     existingActiveModels: ChatCustomModel[],
     builtInModels: ChatCustomModel[]
   ): ChatCustomModel[] {
-    const modelMap = new Map<string, CustomModel>();
+    const modelMap = new Map<string, ChatCustomModel>();
 
     // Create a unique key for each model, it's model (name + provider)
     const getModelKey = (model: CustomModel) => `${model.name}|${model.provider}`;

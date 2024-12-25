@@ -1,4 +1,4 @@
-import { CustomModel, EmbeddingCustomModel } from "@/types";
+import { EmbeddingCustomModel } from "@/types";
 import { RebuildIndexConfirmModal } from "@/components/modals/RebuildIndexConfirmModal";
 import { EmbeddingModelProviders, VAULT_VECTOR_STORE_STRATEGIES } from "@/constants";
 import VectorStoreManager from "@/search/vectorStoreManager";

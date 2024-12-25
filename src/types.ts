@@ -1,5 +1,4 @@
-import { Embeddings } from '@langchain/core/embeddings';
-import { EmbeddingModelProviders } from './constants';
+import { Embeddings } from "@langchain/core/embeddings";
 
 /**
  * Configuration for embedding models.
@@ -49,7 +48,7 @@ export interface CustomEmbeddingModel {
  */
 export interface CustomChatModel {
   name: string;
-  provider: string; // Use ChatModelProviders if available
+  provider: ChatModelProviders;
   enabled: boolean;
   apiKey?: string;
   baseUrl?: string;
@@ -61,7 +60,7 @@ export interface CustomChatModel {
  */
 export interface CustomModel {
   name: string;
-  provider: string; // Can be ChatModelProviders or EmbeddingModelProviders
+  provider: ChatModelProviders | EmbeddingModelProviders;
   enabled: boolean;
   apiKey?: string;
   baseUrl?: string;
@@ -69,25 +68,6 @@ export interface CustomModel {
   isBuiltIn?: boolean;
   core?: boolean;
 }
-export interface ChatCustomModel {
-  name: string;
-  provider: string;
-  enabled: boolean;
-  apiKey?: string;
-  baseUrl?: string;
-  enableCors?: boolean;
-}
-
-export interface EmbeddingCustomModel {
-  name: string;
-  provider: string;
-  enabled: boolean;
-  apiKey?: string;
-  baseUrl?: string;
-  enableCors?: boolean;
-  isBuiltIn?: boolean; // Add this property
-}
-
 
 export interface ModelConfig {
   modelName: string;
@@ -114,49 +94,57 @@ export interface ModelConfig {
 
 export interface ChatCustomModel {
   name: string;
-  provider: string;
+  provider: ChatModelProviders;
   enabled: boolean;
   apiKey?: string;
   baseUrl?: string;
   enableCors?: boolean;
+  isBuiltIn?: boolean;
+  core?: boolean;
 }
 
 export interface EmbeddingCustomModel {
   name: string;
-  provider: string;
+  provider: EmbeddingModelProviders;
   enabled: boolean;
   apiKey?: string;
   baseUrl?: string;
   enableCors?: boolean;
+  isBuiltIn?: boolean;
+  core?: boolean;
+}
+
+export function isChatCustomModel(
+  model: ChatCustomModel | EmbeddingCustomModel
+): model is ChatCustomModel {
+  return Object.values(ChatModelProviders).includes(model.provider as ChatModelProviders);
 }
 
 export function getModelKey(model: ChatCustomModel | EmbeddingCustomModel): string {
   return `${model.name}|${model.provider}`;
 }
 
-export interface ModelConfig {
-  modelName: string;
-  temperature: number;
-  streaming: boolean;
-  maxRetries: number;
-  maxConcurrency: number;
-  maxTokens?: number;
-  openAIApiKey?: string;
-  openAIOrgId?: string;
-  anthropicApiKey?: string;
-  cohereApiKey?: string;
-  azureOpenAIApiKey?: string;
-  azureOpenAIApiInstanceName?: string;
-  azureOpenAIApiDeploymentName?: string;
-  azureOpenAIApiVersion?: string;
-  apiKey?: string;
-  openAIProxyBaseUrl?: string;
-  groqApiKey?: string;
-  enableCors?: boolean;
-  maxCompletionTokens?: number;
-  reasoningEffort?: number;
+export enum ChatModelProviders {
+  OPENAI = "openai",
+  AZURE_OPENAI = "azure_openai",
+  ANTHROPIC = "anthropic",
+  COHEREAI = "cohereai",
+  GOOGLE = "google",
+  OPENROUTERAI = "openrouterai",
+  GROQ = "groq",
+  OLLAMA = "ollama",
+  LM_STUDIO = "lm-studio",
+  THIRD_PARTY_OPENAI = "3rd party (openai-format)",
+  OPENAI_FORMAT = "openai-format",
 }
 
-export function setModelKey(modelKey: string): void {
-  // Implementation placeholder
+export enum EmbeddingModelProviders {
+  OPENAI = "openai",
+  COHEREAI = "cohereai",
+  GOOGLE = "google",
+  AZURE_OPENAI = "azure_openai", // Note the underscore
+  OLLAMA = "ollama",
+  LM_STUDIO = "lm-studio",
+  THIRD_PARTY_OPENAI = "3rd party (openai-format)",
+  OPENAI_FORMAT = "openai-format",
 }

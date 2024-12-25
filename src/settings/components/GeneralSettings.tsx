@@ -1,4 +1,4 @@
-import { CustomModel, ChatCustomModel } from "@/types";
+import { ChatCustomModel } from "@/types";
 import { ChainType } from "@/chainFactory";
 import { ChatModelProviders, DEFAULT_OPEN_AREA } from "@/constants";
 import { setSettings, updateSetting, useSettingsValue } from "@/settings/model";

@@ -1,4 +1,4 @@
-import { CustomModel } from "@/types";
+import { EmbeddingCustomModel, ChatCustomModel } from "@/types";
 import { type CopilotSettings } from "@/settings/model";
 import { ChainType } from "./chainFactory";
 
@@ -12,8 +12,7 @@ export const DEFAULT_SYSTEM_PROMPT = `You are Obsidian Copilot, a helpful assist
   3. If the user mentions "note", it most likely means an Obsidian note in the vault, not the generic meaning of a note.
   4. If the user mentions "@vault", it means the user wants you to search the Obsidian vault for information relevant to the query. The search results will be provided to you in the context. If there's no relevant information in the vault, just say so.
   5. If the user mentions any other tool with the @ symbol, check the context for their results. If nothing is found, just ignore the @ symbol in the query.
-  6. Always use $'s instead of \$etc. for LaTeX equations.
-  7. Always respond in the language of the user's query.
+  6. Always respond in the language of the user's query.
   Do not mention the additional context provided if it's irrelevant to the user message.`;
 export const EMPTY_INDEX_ERROR_MESSAGE =
   "Copilot index does not exist. Please index your vault first!\n\n1. Set a working embedding model in QA settings. If it's not a local model, don't forget to set the API key. \n\n2. Click 'Refresh Index for Vault' and wait for indexing to complete. If you encounter the rate limiting error, please turn your request per second down in QA setting.";
@@ -52,21 +51,21 @@ export enum ChatModelProviders {
   OLLAMA = "ollama",
   LM_STUDIO = "lm-studio",
   THIRD_PARTY_OPENAI = "3rd party (openai-format)",
-  OPENAI_FORMAT = "openai-format"
+  OPENAI_FORMAT = "openai-format",
 }
 
 export enum EmbeddingModelProviders {
   OPENAI = "openai",
   COHEREAI = "cohereai",
   GOOGLE = "google",
-  AZURE_OPENAI = "azure_openai",
+  AZURE_OPENAI = "azure_openai", // Note the underscore
   OLLAMA = "ollama",
   LM_STUDIO = "lm-studio",
   THIRD_PARTY_OPENAI = "3rd party (openai-format)",
-  OPENAI_FORMAT = "openai-format"
+  OPENAI_FORMAT = "openai-format",
 }
 
-export const BUILTIN_CHAT_MODELS: CustomModel[] = [
+export const BUILTIN_CHAT_MODELS: ChatCustomModel[] = [
   {
     name: ChatModels.GPT_4o,
     provider: ChatModelProviders.OPENAI,
@@ -86,6 +85,7 @@ export const BUILTIN_CHAT_MODELS: CustomModel[] = [
     provider: ChatModelProviders.OPENAI,
     enabled: true,
     isBuiltIn: true,
+    core: false,
   },
   {
     name: ChatModels.CLAUDE_3_5_SONNET,
@@ -99,55 +99,51 @@ export const BUILTIN_CHAT_MODELS: CustomModel[] = [
     provider: ChatModelProviders.ANTHROPIC,
     enabled: true,
     isBuiltIn: true,
+    core: false,
   },
   {
     name: ChatModels.COMMAND_R,
     provider: ChatModelProviders.COHEREAI,
     enabled: true,
     isBuiltIn: true,
+    core: false,
   },
   {
     name: ChatModels.COMMAND_R_PLUS,
     provider: ChatModelProviders.COHEREAI,
     enabled: true,
     isBuiltIn: true,
+    core: false,
   },
   {
     name: ChatModels.GEMINI_PRO,
     provider: ChatModelProviders.GOOGLE,
     enabled: true,
     isBuiltIn: true,
+    core: false,
   },
   {
     name: ChatModels.GEMINI_FLASH,
     provider: ChatModelProviders.GOOGLE,
     enabled: true,
     isBuiltIn: true,
+    core: false,
   },
   {
     name: ChatModels.AZURE_OPENAI,
     provider: ChatModelProviders.AZURE_OPENAI,
     enabled: true,
     isBuiltIn: true,
+    core: false,
   },
   {
     name: ChatModels.O1_PREVIEW,
     provider: ChatModelProviders.AZURE_OPENAI,
     enabled: true,
     isBuiltIn: true,
+    core: false,
   },
 ];
-
-export enum EmbeddingModelProviders {
-  OPENAI = "openai",
-  COHEREAI = "cohereai",
-  GOOGLE = "google",
-  AZURE_OPENAI = "azure_openai", // Note the underscore
-  OLLAMA = "ollama",
-  LM_STUDIO = "lm-studio",
-  THIRD_PARTY_OPENAI = "3rd party (openai-format)",
-  OPENAI_FORMAT = "openai-format",
-}
 
 export enum EmbeddingModels {
   OPENAI_EMBEDDING_ADA_V2 = "text-embedding-ada-002",
@@ -158,15 +154,12 @@ export enum EmbeddingModels {
   GOOGLE_ENG = "text-embedding-004",
 }
 
-import { EmbeddingCustomModel } from "@/types";
-
 export const BUILTIN_EMBEDDING_MODELS: EmbeddingCustomModel[] = [
   {
     name: EmbeddingModels.OPENAI_EMBEDDING_SMALL,
     provider: EmbeddingModelProviders.OPENAI,
     enabled: true,
     isBuiltIn: true,
-    isEmbeddingModel: true,
     core: true,
   },
   {
@@ -174,28 +167,24 @@ export const BUILTIN_EMBEDDING_MODELS: EmbeddingCustomModel[] = [
     provider: EmbeddingModelProviders.OPENAI,
     enabled: true,
     isBuiltIn: true,
-    isEmbeddingModel: true,
   },
   {
     name: EmbeddingModels.COHEREAI_EMBED_MULTILINGUAL_LIGHT_V3_0,
     provider: EmbeddingModelProviders.COHEREAI,
     enabled: true,
     isBuiltIn: true,
-    isEmbeddingModel: true,
   },
   {
     name: EmbeddingModels.GOOGLE_ENG,
     provider: EmbeddingModelProviders.GOOGLE,
     enabled: true,
     isBuiltIn: true,
-    isEmbeddingModel: true,
   },
   {
     name: EmbeddingModels.AZURE_OPENAI,
     provider: EmbeddingModelProviders.AZURE_OPENAI,
     enabled: true,
     isBuiltIn: true,
-    isEmbeddingModel: true,
   },
 ];
 

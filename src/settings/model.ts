@@ -8,8 +8,6 @@ import {
   DEFAULT_OPEN_AREA,
   DEFAULT_SETTINGS,
   DEFAULT_SYSTEM_PROMPT,
-  ChatModelProviders,
-  EmbeddingModelProviders,
 } from "@/constants";
 
 export { DEFAULT_SETTINGS };
@@ -81,8 +79,8 @@ export interface CopilotSettings {
   qaInclusions: string;
   groqApiKey: string;
   enabledCommands: Record<string, { enabled: boolean; name: string }>;
-  activeModels: Array<ChatCustomModel>;
-  activeEmbeddingModels: Array<EmbeddingCustomModel>;
+  activeModels: ChatCustomModel[];
+  activeEmbeddingModels: EmbeddingCustomModel[];
   promptUsageTimestamps: Record<string, number>;
   embeddingRequestsPerSecond: number;
   defaultOpenArea: DEFAULT_OPEN_AREA;
@@ -186,11 +184,14 @@ export function getSystemPrompt(): string {
 }
 
 function mergeAllActiveModelsWithCoreModels(settings: CopilotSettings): CopilotSettings {
-  settings.activeModels = mergeActiveModels(settings.activeModels, BUILTIN_CHAT_MODELS);
+  settings.activeModels = mergeActiveModels(
+    settings.activeModels,
+    BUILTIN_CHAT_MODELS
+  ) as ChatCustomModel[];
   settings.activeEmbeddingModels = mergeActiveModels(
     settings.activeEmbeddingModels,
     BUILTIN_EMBEDDING_MODELS
-  );
+  ) as EmbeddingCustomModel[];
   return settings;
 }
 

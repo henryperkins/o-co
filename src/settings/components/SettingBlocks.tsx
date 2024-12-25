@@ -1,8 +1,21 @@
-import { CustomModel, ChatCustomModel, EmbeddingCustomModel } from "@/types";
-import ChatModelManager from "@/LLMProviders/chatModelManager";
-import EmbeddingManager from "@/LLMProviders/embeddingManager";
+import {
+  CustomModel,
+  ChatCustomModel,
+  EmbeddingCustomModel,
+  ChatModelProviders,
+  EmbeddingModelProviders,
+} from "../../types";
+import ChatModelManager from "../../LLMProviders/chatModelManager";
+import EmbeddingManager from "../../LLMProviders/embeddingManager";
 import { App, Notice } from "obsidian";
 import React, { useEffect, useState } from "react";
+
+// Add type guard function
+const isEmbeddingCustomModel = (
+  model: ChatCustomModel | EmbeddingCustomModel
+): model is EmbeddingCustomModel => {
+  return Object.values(EmbeddingModelProviders).includes(model.provider as EmbeddingModelProviders);
+};
 
 type DropdownComponentProps = {
   name: string;
@@ -32,7 +45,7 @@ type TextAreaComponentProps = {
 
 type SliderComponentProps = {
   name: string;
-  description?: React.ReactNode; // This allows for JSX elements, strings, etc.
+  description?: React.ReactNode;
   min: number;
   max: number;
   step: number;
@@ -272,7 +285,7 @@ interface ModelSettingsComponentProps {
   app: App;
   activeModels: Array<CustomModel>;
   onUpdateModels: (models: Array<CustomModel>) => void;
-  providers: string[];
+  providers: Array<ChatModelProviders | EmbeddingModelProviders>;
   onDeleteModel: (modelKey: string) => void;
   defaultModelKey: string;
   onSetDefaultModelKey: (modelKey: string) => void;
@@ -291,18 +304,28 @@ const ModelSettingsComponent: React.FC<ModelSettingsComponentProps> = ({
 }) => {
   const emptyModel: ChatCustomModel | EmbeddingCustomModel = {
     name: "",
-    provider: providers.length > 0 ? providers[0] : "",
+    provider:
+      providers.length > 0
+        ? providers[0]
+        : isEmbeddingModel
+          ? EmbeddingModelProviders.OPENAI
+          : ChatModelProviders.OPENAI,
     baseUrl: "",
     apiKey: "",
     enabled: true,
-    isBuiltIn: false, // Add this property explicitly
+    isBuiltIn: false,
     enableCors: false,
   };
+
   const [newModel, setNewModel] = useState<ChatCustomModel | EmbeddingCustomModel>(emptyModel);
   const [isAddModelOpen, setIsAddModelOpen] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
 
   const getModelKey = (model: CustomModel) => `${model.name}|${model.provider}`;
+
+  const handleSetDefaultModel = (model: CustomModel) => {
+    onSetDefaultModelKey(getModelKey(model));
+  };
 
   const handleAddModel = () => {
     if (newModel.name && newModel.provider) {
@@ -314,11 +337,7 @@ const ModelSettingsComponent: React.FC<ModelSettingsComponentProps> = ({
     }
   };
 
-  const handleSetDefaultModel = (model: CustomModel) => {
-    const modelKey = getModelKey(model);
-    onSetDefaultModelKey(modelKey);
-  };
-
+  // Updated handleVerifyModel with type guard
   const handleVerifyModel = async () => {
     if (!newModel.name || !newModel.provider) {
       new Notice("Please fill in necessary fields!");
@@ -328,14 +347,22 @@ const ModelSettingsComponent: React.FC<ModelSettingsComponentProps> = ({
     setIsVerifying(true);
     try {
       if (isEmbeddingModel) {
-        await EmbeddingManager.getInstance().ping(newModel);
+        if (isEmbeddingCustomModel(newModel)) {
+          await EmbeddingManager.getInstance().ping(newModel);
+          new Notice("Model connection verified successfully!");
+        } else {
+          throw new Error("Invalid type for embedding model verification");
+        }
       } else {
-        await ChatModelManager.getInstance().ping(newModel);
+        // Type assertion since we know it's a ChatCustomModel in this branch
+        await ChatModelManager.getInstance().ping(newModel as ChatCustomModel);
+        new Notice("Model connection verified successfully!");
       }
-      new Notice("Model connection verified successfully!");
     } catch (error) {
+      // Improve error typing
+      const message = error instanceof Error ? error.message : "Unknown error occurred";
       console.error("Model verification failed:", error);
-      new Notice(`Model verification failed: ${error.message}`);
+      new Notice(`Model verification failed: ${message}`);
     } finally {
       setIsVerifying(false);
     }
@@ -449,10 +476,13 @@ const ModelSettingsComponent: React.FC<ModelSettingsComponentProps> = ({
             />
             <DropdownComponent
               name="Provider"
-              options={providers}
+              options={providers.map((p) => p.toString())}
               value={newModel.provider}
               onChange={(value) => {
-                setNewModel({ ...newModel, provider: value });
+                setNewModel({
+                  ...newModel,
+                  provider: value as ChatModelProviders | EmbeddingModelProviders,
+                });
               }}
             />
             <TextComponent

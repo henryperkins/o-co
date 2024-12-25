@@ -7,7 +7,7 @@ import { RunnableSequence } from "@langchain/core/runnables";
 import { BaseChain, RetrievalQAChain } from "langchain/chains";
 import moment from "moment";
 import { TFile, Vault, parseYaml, requestUrl } from "obsidian";
-import { CustomModel, ChatCustomModel, EmbeddingCustomModel } from "@/types";
+import { ChatCustomModel, EmbeddingCustomModel } from "@/types";
 
 export const getModelNameFromKey = (modelKey: string): string => {
   return modelKey.split("|")[0];
@@ -258,7 +258,6 @@ export async function getAllNotesContent(vault: Vault): Promise<string> {
 
   return allContent;
 }
-
 
 // Basic prompts
 export function sendNotesContentPrompt(notes: { name: string; content: string }[]): string {
@@ -514,9 +513,9 @@ export function areEmbeddingModelsSame(
   }
 
   // For all other models, split and compare only the model name part
-  const currentModelName = currentEmbeddingModelKey.split('|')[0];
-  const prevModelName = prevModel.split('|')[0];
-  
+  const currentModelName = currentEmbeddingModelKey.split("|")[0];
+  const prevModelName = prevModel.split("|")[0];
+
   return currentModelName === prevModelName;
 }
 

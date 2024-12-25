@@ -5,30 +5,27 @@ import {
   setChainType,
   subscribeToChainTypeChange,
   subscribeToModelKeyChange,
-} from "@/aiParams";
-import ChainFactory, { ChainType, Document } from "@/chainFactory";
+} from "../aiParams";
+import ChainFactory, { ChainType, Document } from "../chainFactory";
 import {
   AI_SENDER,
   BUILTIN_CHAT_MODELS,
   ChatModelProviders,
   USER_SENDER,
   VAULT_VECTOR_STORE_STRATEGY,
-} from "@/constants";
+} from "../constants";
 import {
   ChainRunner,
   CopilotPlusChainRunner,
   LLMChainRunner,
   VaultQAChainRunner,
-} from "@/LLMProviders/chainRunner";
-import { HybridRetriever } from "@/search/hybridRetriever";
-import VectorStoreManager from "@/search/vectorStoreManager";
-import {
-  getSettings,
-  getSystemPrompt,
-  subscribeToSettingsChange,
-} from "@/settings/model";
-import { ChatMessage } from "@/sharedState";
-import { findCustomModel, isSupportedChain } from "@/utils";
+} from "./chainRunner";
+import { HybridRetriever } from "../search/hybridRetriever";
+import VectorStoreManager from "../search/vectorStoreManager";
+import { getSettings, getSystemPrompt, subscribeToSettingsChange } from "../settings/model";
+import { ChatMessage } from "../sharedState";
+import { findCustomModel, isSupportedChain } from "../utils";
+import { isChatCustomModel } from "../types";
 import {
   ChatPromptTemplate,
   HumanMessagePromptTemplate,
@@ -57,11 +54,7 @@ export default class ChainManager {
   public brevilabsClient: BrevilabsClient;
   public static retrievedDocuments: Document[] = [];
 
-  constructor(
-    app: App,
-    vectorStoreManager: VectorStoreManager,
-    brevilabsClient: BrevilabsClient
-  ) {
+  constructor(app: App, vectorStoreManager: VectorStoreManager, brevilabsClient: BrevilabsClient) {
     // Instantiate singletons
     this.app = app;
     this.vectorStoreManager = vectorStoreManager;
@@ -75,8 +68,7 @@ export default class ChainManager {
     subscribeToChainTypeChange(() =>
       this.setChain(getChainType(), {
         refreshIndex:
-          getSettings().indexVaultToVectorStore ===
-            VAULT_VECTOR_STORE_STRATEGY.ON_MODE_SWITCH &&
+          getSettings().indexVaultToVectorStore === VAULT_VECTOR_STORE_STRATEGY.ON_MODE_SWITCH &&
           (getChainType() === ChainType.VAULT_QA_CHAIN ||
             getChainType() === ChainType.COPILOT_PLUS_CHAIN),
       })
@@ -93,16 +85,11 @@ export default class ChainManager {
   }
 
   private validateChainType(chainType: ChainType): void {
-    if (chainType === undefined || chainType === null)
-      throw new Error("No chain type set");
+    if (chainType === undefined || chainType === null) throw new Error("No chain type set");
   }
 
   private validateChatModel() {
-    if (
-      !this.chatModelManager.validateChatModel(
-        this.chatModelManager.getChatModel()
-      )
-    ) {
+    if (!this.chatModelManager.validateChatModel(this.chatModelManager.getChatModel())) {
       const errorMsg =
         "Chat model is not initialized properly, check your API key in Copilot setting and make sure you have API access.";
       new Notice(errorMsg);
@@ -112,10 +99,7 @@ export default class ChainManager {
 
   private validateChainInitialization() {
     if (!ChainManager.chain || !isSupportedChain(ChainManager.chain)) {
-      console.error(
-        "Chain is not initialized properly, re-initializing chain: ",
-        getChainType()
-      );
+      console.error("Chain is not initialized properly, re-initializing chain: ", getChainType());
       this.setChain(getChainType());
     }
   }
@@ -131,16 +115,10 @@ export default class ChainManager {
   createChainWithNewModel(): void {
     let newModelKey = getModelKey();
     try {
-      let customModel = findCustomModel(
-        newModelKey,
-        getSettings().activeModels
-      );
+      let customModel = findCustomModel(newModelKey, getSettings().activeModels);
       if (!customModel) {
         // Reset default model if no model is found
-        console.error(
-          "Resetting default model. No model configuration found for: ",
-          newModelKey
-        );
+        console.error("Resetting default model. No model configuration found for: ", newModelKey);
         customModel = BUILTIN_CHAT_MODELS[0];
         newModelKey = customModel.name + "|" + customModel.provider;
       }
@@ -164,6 +142,9 @@ export default class ChainManager {
         }
       }
 
+      if (!isChatCustomModel(customModel)) {
+        throw new Error(`Model ${newModelKey} is not a valid chat model`);
+      }
       this.chatModelManager.setChatModel(customModel);
       // Must update the chatModel for chain because ChainFactory always
       // retrieves the old chain without the chatModel change if it exists!
@@ -176,15 +157,8 @@ export default class ChainManager {
     }
   }
 
-  async setChain(
-    chainType: ChainType,
-    options: SetChainOptions = {}
-  ): Promise<void> {
-    if (
-      !this.chatModelManager.validateChatModel(
-        this.chatModelManager.getChatModel()
-      )
-    ) {
+  async setChain(chainType: ChainType, options: SetChainOptions = {}): Promise<void> {
+    if (!this.chatModelManager.validateChatModel(this.chatModelManager.getChatModel())) {
       console.error("setChain failed: No chat model set.");
       return;
     }
@@ -263,9 +237,7 @@ export default class ChainManager {
 
         setChainType(ChainType.VAULT_QA_CHAIN);
         if (getSettings().debug) {
-          console.log(
-            "New Vault QA chain with hybrid retriever created for entire vault"
-          );
+          console.log("New Vault QA chain with hybrid retriever created for entire vault");
           console.log("Set chain:", ChainType.VAULT_QA_CHAIN);
         }
         break;
@@ -308,9 +280,7 @@ export default class ChainManager {
   private async initializeQAChain(options: SetChainOptions) {
     const embeddingsAPI = this.embeddingsManager.getEmbeddingsAPI();
     if (!embeddingsAPI) {
-      throw new Error(
-        "Error getting embeddings API. Please check your settings."
-      );
+      throw new Error("Error getting embeddings API. Please check your settings.");
     }
 
     const modelKey = getModelKey();
@@ -332,9 +302,7 @@ export default class ChainManager {
           azureOpenAIApiVersion: deployment.apiVersion,
         } as unknown as Embeddings;
 
-        const db = await this.vectorStoreManager.getOrInitializeDb(
-          embeddingsModel
-        );
+        const db = await this.vectorStoreManager.getOrInitializeDb(embeddingsModel);
 
         // Handle index refresh if needed
         if (options.refreshIndex) {
@@ -370,15 +338,13 @@ export default class ChainManager {
   ) {
     const { debug = false, ignoreSystemMessage = false } = options;
 
-    if (debug)
-      console.log("==== Step 0: Initial user message ====\n", userMessage);
+    if (debug) console.log("==== Step 0: Initial user message ====\n", userMessage);
 
     this.validateChatModel();
     this.validateChainInitialization();
 
     const chatModel = this.chatModelManager.getChatModel();
-    const modelName =
-      (chatModel as any).modelName || (chatModel as any).model || "";
+    const modelName = (chatModel as any).modelName || (chatModel as any).model || "";
     const isO1Model = modelName.startsWith("o1");
 
     // Handle ignoreSystemMessage

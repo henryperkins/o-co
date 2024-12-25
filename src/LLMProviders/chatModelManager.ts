@@ -1,9 +1,8 @@
-import { CustomModel, ChatCustomModel, getModelKey, ModelConfig, setModelKey } from "@/types";
-import { BUILTIN_CHAT_MODELS, ChatModelProviders } from "@/constants";
-import { getDecryptedKey } from "@/encryptionService";
-import { getSettings, subscribeToSettingsChange, updateSetting } from "@/settings/model";
-import { safeFetch } from "@/utils";
-import axios from "axios";
+import { CustomModel, getModelKey, ModelConfig, setModelKey } from "../aiParams";
+import { BUILTIN_CHAT_MODELS, ChatModelProviders } from "../constants";
+import { getDecryptedKey } from "../encryptionService";
+import { getSettings, subscribeToSettingsChange } from "../settings/model";
+import { safeFetch } from "../utils";
 import { HarmBlockThreshold, HarmCategory } from "@google/generative-ai";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { ChatCohere } from "@langchain/cohere";
@@ -16,7 +15,7 @@ import { Notice } from "obsidian";
 
 type ChatConstructorType = new (config: any) => BaseChatModel;
 
-const CHAT_PROVIDER_CONSTRUCTORS = {
+const CHAT_PROVIDER_CONSTRUCTORS: Record<ChatModelProviders, ChatConstructorType> = {
   [ChatModelProviders.OPENAI]: ChatOpenAI,
   [ChatModelProviders.AZURE_OPENAI]: ChatOpenAI,
   [ChatModelProviders.ANTHROPIC]: ChatAnthropic,
@@ -27,7 +26,8 @@ const CHAT_PROVIDER_CONSTRUCTORS = {
   [ChatModelProviders.LM_STUDIO]: ChatOpenAI,
   [ChatModelProviders.GROQ]: ChatGroq,
   [ChatModelProviders.OPENAI_FORMAT]: ChatOpenAI,
-} as const;
+  [ChatModelProviders.THIRD_PARTY_OPENAI]: ChatOpenAI, // Added THIRD_PARTY_OPENAI
+};
 
 export default class ChatModelManager {
   private static instance: ChatModelManager;
@@ -52,12 +52,11 @@ export default class ChatModelManager {
     [ChatModelProviders.OLLAMA]: () => "default-key",
     [ChatModelProviders.LM_STUDIO]: () => "default-key",
     [ChatModelProviders.OPENAI_FORMAT]: () => "default-key",
-    [ChatModelProviders.THIRD_PARTY_OPENAI]: () => "default-key", // Add this entry
+    [ChatModelProviders.THIRD_PARTY_OPENAI]: () => "", // Added THIRD_PARTY_OPENAI
   } as const;
 
   private constructor() {
     this.buildModelMap();
-    this.createDefaultAzureModels();
     subscribeToSettingsChange(() => {
       this.buildModelMap();
       this.validateCurrentModel();
@@ -71,105 +70,25 @@ export default class ChatModelManager {
     return ChatModelManager.instance;
   }
 
-  /**
-   * Fetch deployments from Azure OpenAI to dynamically identify models linked to deployments.
-   */
-  private async getDeploymentModelDetails(
-    instanceName: string,
-    apiKey: string,
-    apiVersion = "2023-06-01-preview" // Removed explicit type annotation
-  ): Promise<Record<string, string>> {
-    const endpoint = `https://${instanceName}.openai.azure.com/openai/deployments?api-version=${apiVersion}`;
-    try {
-      const response = await axios.get(endpoint, {
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-        },
-      });
-
-      // Parse deployments and build a mapping: deploymentName -> modelName
-      const deployments: { name: string; model: string }[] = response.data.data;
-      const deploymentModelMap: Record<string, string> = {};
-      deployments.forEach(({ name, model }) => {
-        deploymentModelMap[name] = model;
-      });
-      return deploymentModelMap;
-    } catch (error) {
-      console.error("Error fetching Azure deployments:", error?.response?.data || error);
-      throw new Error("Failed to fetch Azure OpenAI deployments. Please check your configuration.");
-    }
-  }
-
-  private async createDefaultAzureModels() {
-    const settings = getSettings();
-    if (!settings.azureOpenAIApiDeployments || settings.azureOpenAIApiDeployments.length === 0)
-      return;
-
-    for (const deployment of settings.azureOpenAIApiDeployments) {
-      try {
-        const deploymentModels = await this.getDeploymentModelDetails(
-          deployment.instanceName,
-          deployment.apiKey,
-          deployment.apiVersion
-        );
-
-        if (deploymentModels && deploymentModels[deployment.deploymentName]) {
-          const modelName = deploymentModels[deployment.deploymentName];
-          const modelKey = `${modelName}|${ChatModelProviders.AZURE_OPENAI}`;
-
-          // Check if the model already exists
-          if (
-            !settings.activeModels.find((model) => `${model.name}|${model.provider}` === modelKey)
-          ) {
-            const newModel = {
-              name: modelName,
-              provider: ChatModelProviders.AZURE_OPENAI,
-              enabled: true,
-              isBuiltIn: false,
-              core: false,
-              apiKey: deployment.apiKey,
-              baseUrl: `https://${deployment.instanceName}.openai.azure.com/`,
-            };
-
-            // Update settings to include the new model
-            updateSetting("activeModels", [...settings.activeModels, newModel]);
-            console.log(
-              `Created default model "${modelName}" for deployment "${deployment.deploymentName}"`
-            );
-          } else {
-            console.log(
-              `Default model "${modelName}" already exists for deployment "${deployment.deploymentName}"`
-            );
-          }
-        }
-      } catch (error) {
-        console.error(
-          `Failed to create default model for deployment ${deployment.deploymentName}:`,
-          error
-        );
-      }
-    }
-  }
-
   private getModelConfig(customModel: CustomModel): ModelConfig {
     const settings = getSettings();
-    const modelKey = getModelKey(customModel); // Pass the appropriate model object
+    const modelKey = getModelKey();
+
     const modelConfig = settings.modelConfigs[modelKey] || {};
 
     // Check if the model starts with "o1"
     const modelName = customModel.name;
     const isO1Model = modelName.startsWith("o1");
-    const isPreviewModel = modelName.startsWith("o1-preview");
 
     const baseConfig: ModelConfig = {
       modelName: modelName,
-      temperature: modelConfig.temperature || settings.temperature,
+      temperature: modelConfig.temperature ?? 0.7, // Default to 0.7 if undefined
       streaming: true,
       maxRetries: 3,
       maxConcurrency: 3,
       maxTokens: modelConfig.maxTokens,
       maxCompletionTokens: modelConfig.maxCompletionTokens,
-      reasoningEffort: isO1Model ? modelConfig.reasoningEffort : undefined,
+      reasoningEffort: modelConfig.reasoningEffort,
       enableCors: customModel.enableCors,
     };
 
@@ -194,7 +113,7 @@ export default class ChatModelManager {
     }
 
     // Fix the type definition - use Record instead of complex mapped type
-    const providerConfig: Record<ChatModelProviders, any> = {
+    const providerConfig = {
       [ChatModelProviders.OPENAI]: {
         modelName: modelName,
         openAIApiKey: getDecryptedKey(customModel.apiKey || settings.openAIApiKey),
@@ -205,7 +124,6 @@ export default class ChatModelManager {
         openAIOrgId: getDecryptedKey(settings.openAIOrgId),
         ...this.handleOpenAIExtraArgs(
           isO1Model,
-          isPreviewModel,
           modelConfig.maxTokens,
           modelConfig.temperature,
           modelConfig.maxCompletionTokens,
@@ -234,8 +152,7 @@ export default class ChatModelManager {
           fetch: customModel.enableCors ? safeFetch : undefined,
         },
         ...this.handleOpenAIExtraArgs(
-          isO1Model,
-          isPreviewModel,
+          modelKey.startsWith("o1-preview"),
           modelConfig.maxTokens,
           modelConfig.temperature,
           modelConfig.maxCompletionTokens,
@@ -307,66 +224,44 @@ export default class ChatModelManager {
         },
         ...this.handleOpenAIExtraArgs(
           isO1Model,
-          isPreviewModel,
           modelConfig.maxTokens,
           modelConfig.temperature,
           modelConfig.maxCompletionTokens,
           modelConfig.reasoningEffort
         ),
       },
-      [ChatModelProviders.THIRD_PARTY_OPENAI]: {
-        modelName: modelName,
-        openAIApiKey: getDecryptedKey(customModel.apiKey || settings.openAIApiKey),
-        configuration: {
-          baseURL: customModel.baseUrl,
-          fetch: customModel.enableCors ? safeFetch : undefined,
-          dangerouslyAllowBrowser: true,
-        },
-        ...this.handleOpenAIExtraArgs(
-          isO1Model,
-          isPreviewModel,
-          modelConfig.maxTokens,
-          modelConfig.temperature,
-          modelConfig.maxCompletionTokens,
-          modelConfig.reasoningEffort
-        ),
-      }, // Add this entry
     };
 
     const selectedProviderConfig =
       providerConfig[customModel.provider as keyof typeof providerConfig] || {};
 
-    return { ...baseConfig, ...selectedProviderConfig };
+    return {
+      ...baseConfig,
+      ...selectedProviderConfig,
+      temperature:
+        "temperature" in selectedProviderConfig ? (selectedProviderConfig.temperature ?? 1) : 1, // Default to 1 if undefined
+    };
   }
 
   private handleOpenAIExtraArgs(
     isO1Model: boolean,
-    isPreviewModel: boolean,
     maxTokens: number | undefined,
     temperature: number | undefined,
     maxCompletionTokens: number | undefined,
     reasoningEffort: number | undefined
   ) {
-    if (isO1Model) {
-      return {
-        maxCompletionTokens: maxCompletionTokens,
-        temperature: 1,
-        extraParams: {
-          reasoning_effort: reasoningEffort,
-        },
-      };
-    }
-    if (isPreviewModel) {
-      return {
-        maxCompletionTokens: maxCompletionTokens,
-        temperature: 1,
-      };
-    }
-
-    return {
-      maxTokens: maxTokens,
-      temperature: temperature,
-    };
+    return isO1Model
+      ? {
+          maxCompletionTokens: maxCompletionTokens,
+          temperature: 1,
+          extraParams: {
+            reasoning_effort: reasoningEffort,
+          },
+        }
+      : {
+          maxTokens: maxTokens,
+          temperature: temperature,
+        };
   }
 
   // Build a map of modelKey to model config
@@ -398,7 +293,7 @@ export default class ChatModelManager {
     });
   }
 
-  getProviderConstructor(model: ChatCustomModel): ChatConstructorType {
+  getProviderConstructor(model: CustomModel): ChatConstructorType {
     const constructor: ChatConstructorType =
       CHAT_PROVIDER_CONSTRUCTORS[model.provider as ChatModelProviders];
     if (!constructor) {
@@ -415,7 +310,7 @@ export default class ChatModelManager {
     return ChatModelManager.chatModel;
   }
 
-  setChatModel(model: ChatCustomModel): void {
+  setChatModel(model: CustomModel): void {
     const modelKey = `${model.name}|${model.provider}`;
     if (!ChatModelManager.modelMap.hasOwnProperty(modelKey)) {
       throw new Error(`No model found for: ${modelKey}`);
@@ -459,8 +354,7 @@ export default class ChatModelManager {
   private validateCurrentModel(): void {
     if (!ChatModelManager.chatModel) return;
 
-    const settings = getSettings();
-    const currentModelKey = getModelKey(settings.activeModels[0]); // Use the first active model
+    const currentModelKey = getModelKey();
     if (!currentModelKey) return;
 
     // Get the model configuration
@@ -500,6 +394,7 @@ export default class ChatModelManager {
         new Notice(
           "Connection successful, but requires CORS to be enabled. Please enable CORS for this model once you add it above."
         );
+
         return true;
       } catch (error) {
         console.error("Chat model ping failed:", error);
