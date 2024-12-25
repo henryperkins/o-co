@@ -3,7 +3,6 @@ import { getDecryptedKey } from "@/encryptionService";
 import { CustomError } from "@/error";
 import { getSettings, subscribeToSettingsChange } from "@/settings/model";
 import { safeFetch } from "@/utils";
-
 import { CohereEmbeddings } from "@langchain/cohere";
 import { Embeddings } from "@langchain/core/embeddings";
 import { GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
@@ -13,21 +12,8 @@ import { Notice } from "obsidian";
 
 type EmbeddingConstructorType = new (config: any) => Embeddings;
 
-export interface EmbeddingModelConfig {
-  modelName: string;
-  maxRetries: number;
-  maxConcurrency: number;
-  azureOpenAIApiKey?: string;
-  azureOpenAIApiInstanceName?: string;
-  azureOpenAIApiDeploymentName?: string;
-  azureOpenAIApiVersion?: string;
-  configuration?: {
-    baseURL?: string;
-    fetch?: typeof fetch;
-  };
-}
-
-const EMBEDDING_PROVIDER_CONSTRUCTORS: Record<EmbeddingModelProviders, EmbeddingConstructorType> = {
+const EMBEDDING_PROVIDER_CONSTRUCTORS = {
+  [EmbeddingModelProviders.COPILOT_PLUS]: OpenAIEmbeddings,
   [EmbeddingModelProviders.OPENAI]: OpenAIEmbeddings,
   [EmbeddingModelProviders.COHEREAI]: CohereEmbeddings,
   [EmbeddingModelProviders.GOOGLE]: GoogleGenerativeAIEmbeddings,
@@ -54,6 +40,7 @@ export default class EmbeddingManager {
   >;
 
   private readonly providerApiKeyMap: Record<EmbeddingModelProviders, () => string> = {
+    [EmbeddingModelProviders.COPILOT_PLUS]: () => getSettings().plusLicenseKey,
     [EmbeddingModelProviders.OPENAI]: () => getSettings().openAIApiKey,
     [EmbeddingModelProviders.COHEREAI]: () => getSettings().cohereApiKey,
     [EmbeddingModelProviders.GOOGLE]: () => getSettings().googleApiKey,
@@ -176,6 +163,15 @@ export default class EmbeddingManager {
         EmbeddingProviderConstructorMap[K]
       >[0];
     } = {
+      [EmbeddingModelProviders.COPILOT_PLUS]: {
+        modelName,
+        apiKey: getDecryptedKey(settings.plusLicenseKey),
+        timeout: 10000,
+        configuration: {
+          baseURL: BREVILABS_API_BASE_URL,
+          fetch: customModel.enableCors ? safeFetch : undefined,
+        },
+      },
       [EmbeddingModelProviders.OPENAI]: {
         modelName,
         openAIApiKey: getDecryptedKey(customModel.apiKey || settings.openAIApiKey),

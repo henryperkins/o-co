@@ -1,4 +1,4 @@
-import { EmbeddingCustomModel, ChatCustomModel } from "@/types";
+import { ChatCustomModel } from "@/types";
 import { type CopilotSettings } from "@/settings/model";
 import { ChainType } from "./chainFactory";
 
@@ -55,6 +55,7 @@ export enum ChatModelProviders {
 }
 
 export enum EmbeddingModelProviders {
+  COPILOT_PLUS = "copilot-plus",
   OPENAI = "openai",
   COHEREAI = "cohereai",
   GOOGLE = "google",
@@ -145,6 +146,19 @@ export const BUILTIN_CHAT_MODELS: ChatCustomModel[] = [
   },
 ];
 
+export enum EmbeddingModelProviders {
+  OPENAI = "openai",
+  COHEREAI = "cohereai",
+  GOOGLE = "google",
+  AZURE_OPENAI = "azure_openai",
+  OLLAMA = "ollama",
+  LM_STUDIO = "lm-studio",
+  OPENAI_FORMAT = "3rd party (openai-format)",
+  COPILOT_PLUS = "copilot-plus",
+  // HUGGINGFACE = "huggingface",
+  // VOYAGEAI = "voyageai",
+}
+
 export enum EmbeddingModels {
   OPENAI_EMBEDDING_ADA_V2 = "text-embedding-ada-002",
   OPENAI_EMBEDDING_SMALL = "text-embedding-3-small",
@@ -152,9 +166,18 @@ export enum EmbeddingModels {
   AZURE_OPENAI = "azure-openai",
   COHEREAI_EMBED_MULTILINGUAL_LIGHT_V3_0 = "embed-multilingual-light-v3.0",
   GOOGLE_ENG = "text-embedding-004",
+  COPILOT_PLUS_SMALL = "copilot-plus-small",
 }
 
-export const BUILTIN_EMBEDDING_MODELS: EmbeddingCustomModel[] = [
+export const BUILTIN_EMBEDDING_MODELS: CustomModel[] = [
+  {
+    name: EmbeddingModels.COPILOT_PLUS_SMALL,
+    provider: EmbeddingModelProviders.COPILOT_PLUS,
+    enabled: true,
+    isBuiltIn: true,
+    isEmbeddingModel: true,
+    core: true,
+  },
   {
     name: EmbeddingModels.OPENAI_EMBEDDING_SMALL,
     provider: EmbeddingModelProviders.OPENAI,
@@ -248,7 +271,8 @@ export const DEFAULT_SETTINGS: CopilotSettings = {
   openRouterAiApiKey: "",
   defaultChainType: ChainType.LLM_CHAIN,
   defaultModelKey: ChatModels.GPT_4o + "|" + ChatModelProviders.OPENAI,
-  embeddingModelKey: EmbeddingModels.OPENAI_EMBEDDING_SMALL + "|" + EmbeddingModelProviders.OPENAI,
+  embeddingModelKey:
+    EmbeddingModels.COPILOT_PLUS_SMALL + "|" + EmbeddingModelProviders.COPILOT_PLUS,
   temperature: 0.1,
   maxTokens: 1000,
   contextTurns: 15,
