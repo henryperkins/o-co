@@ -21,19 +21,7 @@ const modelKeyAtom = atom(
     if (userValue !== null) {
       return userValue;
     }
-    const modelKey = get(settingsAtom).defaultModelKey;
-    const isAzure = modelKey.startsWith(ChatModelProviders.AZURE_OPENAI);
-    const isO1Preview = modelKey.startsWith("o1-preview");
-    if (isAzure && !isO1Preview) {
-      return modelKey;
-    }
-    const deploymentName = isO1Preview ? modelKey.split("|")[1] : "";
-    const settings = getSettings();
-    const defaultDeployment = settings.azureOpenAIApiDeployments?.[0];
-    if (isO1Preview && !deploymentName && defaultDeployment) {
-      return `${modelKey}|${defaultDeployment.deploymentName}`;
-    }
-    return modelKey;
+    return get(settingsAtom).defaultModelKey;
   },
   (get, set, newValue) => {
     set(userModelKeyAtom, newValue);
@@ -88,7 +76,7 @@ export interface SetChainOptions {
 
 export interface CustomModel {
   name: string;
-  provider: string;
+  provider: ChatModelProviders;
   baseUrl?: string;
   apiKey?: string;
   enabled: boolean;
@@ -137,29 +125,7 @@ export function useChainType() {
 export function updateModelConfig(modelKey: string, newConfig: Partial<ModelConfig>) {
   const settings = getSettings();
   const modelConfigs = { ...settings.modelConfigs };
-
-  // Handle Azure models config update
-  if (modelKey.startsWith("o1-preview")) {
-    const deploymentName = modelKey.split("|")[1] || "";
-
-    const deploymentIndex = settings.azureOpenAIApiDeployments?.findIndex(
-      (d) => d.deploymentName === deploymentName
-    );
-
-    if (deploymentIndex !== undefined && deploymentIndex !== -1) {
-      const deployment = settings.azureOpenAIApiDeployments?.[deploymentIndex];
-      if (deployment) {
-        newConfig = merge({}, newConfig, {
-          apiKey: deployment.apiKey,
-          azureOpenAIApiInstanceName: deployment.instanceName,
-          azureOpenAIApiVersion: deployment.apiVersion,
-        });
-      }
-    }
-  }
-
   modelConfigs[modelKey] = merge({}, modelConfigs[modelKey], newConfig);
-
   setSettings({ ...settings, modelConfigs });
 }
 

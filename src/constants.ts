@@ -12,7 +12,7 @@ export const DEFAULT_SYSTEM_PROMPT = `You are Obsidian Copilot, a helpful assist
   3. If the user mentions "note", it most likely means an Obsidian note in the vault, not the generic meaning of a note.
   4. If the user mentions "@vault", it means the user wants you to search the Obsidian vault for information relevant to the query. The search results will be provided to you in the context. If there's no relevant information in the vault, just say so.
   5. If the user mentions any other tool with the @ symbol, check the context for their results. If nothing is found, just ignore the @ symbol in the query.
-  6. Always use $'s instead of \\[ etc. for LaTeX equations.
+  6. Always use $'s instead of \$etc. for LaTeX equations.
   7. Always respond in the language of the user's query.
   Do not mention the additional context provided if it's irrelevant to the user message.`;
 export const EMPTY_INDEX_ERROR_MESSAGE =
@@ -130,12 +130,10 @@ export enum EmbeddingModelProviders {
   OPENAI = "openai",
   COHEREAI = "cohereai",
   GOOGLE = "google",
-  AZURE_OPENAI = "azure_openai",
+  AZURE_OPENAI = "azure_openai", // Note the underscore
   OLLAMA = "ollama",
   LM_STUDIO = "lm-studio",
-  OPENAI_FORMAT = "3rd party (openai-format)",
-  // HUGGINGFACE = "huggingface",
-  // VOYAGEAI = "voyageai",
+  THIRD_PARTY_OPENAI = "3rd party (openai-format)",
 }
 
 export enum EmbeddingModels {
@@ -246,7 +244,7 @@ export const DEFAULT_SETTINGS: CopilotSettings = {
   openRouterAiApiKey: "",
   defaultChainType: ChainType.LLM_CHAIN,
   defaultModelKey: ChatModels.GPT_4o + "|" + ChatModelProviders.OPENAI,
-  embeddingModelKey: EmbeddingModels.OPENAI_EMBEDDING_SMALL + "|" + ChatModelProviders.OPENAI,
+  embeddingModelKey: EmbeddingModels.OPENAI_EMBEDDING_SMALL + "|" + EmbeddingModelProviders.OPENAI,
   temperature: 0.1,
   maxTokens: 1000,
   contextTurns: 15,

@@ -1,5 +1,5 @@
 import { CustomModel, getModelKey } from "@/aiParams";
-import { EmbeddingModelProviders } from "@/constants";
+import { EmbeddingModelProviders, ChatModelProviders } from "@/constants";
 import { getDecryptedKey } from "@/encryptionService";
 import { CustomError } from "@/error";
 import { getSettings, subscribeToSettingsChange } from "@/settings/model";
@@ -13,6 +13,19 @@ import { Notice } from "obsidian";
 
 type EmbeddingConstructorType = new (config: any) => Embeddings;
 
+export interface EmbeddingModelConfig {
+  modelName: string;
+  maxRetries: number;
+  maxConcurrency: number;
+  azureOpenAIApiKey?: string;
+  azureOpenAIApiInstanceName?: string;
+  azureOpenAIApiDeploymentName?: string;
+  azureOpenAIApiVersion?: string;
+  configuration?: {
+    baseURL?: string;
+    fetch?: typeof fetch;
+  };
+}
 const EMBEDDING_PROVIDER_CONSTRUCTORS = {
   [EmbeddingModelProviders.OPENAI]: OpenAIEmbeddings,
   [EmbeddingModelProviders.COHEREAI]: CohereEmbeddings,
@@ -67,7 +80,7 @@ export default class EmbeddingManager {
   }
 
   getProviderConstructor(model: CustomModel): EmbeddingConstructorType {
-    const constructor = EMBEDDING_PROVIDER_CONSTRUCTORS[model.provider as EmbeddingModelProviders];
+    const constructor = EMBEDDING_PROVIDER_CONSTRUCTORS[model.provider];
     if (!constructor) {
       console.warn(`Unknown provider: ${model.provider} for model: ${model.name}`);
       throw new Error(`Unknown provider: ${model.provider} for model: ${model.name}`);
@@ -156,6 +169,45 @@ export default class EmbeddingManager {
       maxConcurrency: 3,
     };
 
+    // Handle Azure OpenAI case first
+    if (customModel.provider === EmbeddingModelProviders.AZURE_OPENAI) {
+      // Check if it's an o1-preview model
+      const azureDeploymentName = modelKey.split("|")[1] || "";
+      const deployment = settings.azureOpenAIApiDeployments?.find(
+        (d) => d.deploymentName === azureDeploymentName
+      );
+
+      if (deployment) {
+        return {
+          ...baseConfig,
+          modelName: modelName,
+          azureOpenAIApiKey: getDecryptedKey(deployment.apiKey),
+          azureOpenAIApiInstanceName: deployment.instanceName,
+          azureOpenAIApiDeploymentName: deployment.deploymentName,
+          azureOpenAIApiVersion: deployment.apiVersion,
+          configuration: {
+            baseURL: customModel.baseUrl,
+            fetch: customModel.enableCors ? safeFetch : undefined,
+          },
+        };
+      }
+
+      // Fallback to default Azure settings if no deployment found
+      return {
+        ...baseConfig,
+        modelName: modelName,
+        azureOpenAIApiKey: getDecryptedKey(settings.azureOpenAIApiKey),
+        azureOpenAIApiInstanceName: settings.azureOpenAIApiInstanceName,
+        azureOpenAIApiDeploymentName: settings.azureOpenAIApiEmbeddingDeploymentName,
+        azureOpenAIApiVersion: settings.azureOpenAIApiVersion,
+        configuration: {
+          baseURL: customModel.baseUrl,
+          fetch: customModel.enableCors ? safeFetch : undefined,
+        },
+      };
+    }
+
+    // Rest of provider configurations...
     const providerConfig: {
       [K in keyof EmbeddingProviderConstructorMap]: ConstructorParameters<
         EmbeddingProviderConstructorMap[K]
@@ -177,17 +229,6 @@ export default class EmbeddingManager {
       [EmbeddingModelProviders.GOOGLE]: {
         modelName: modelName,
         apiKey: getDecryptedKey(settings.googleApiKey),
-      },
-      [EmbeddingModelProviders.AZURE_OPENAI]: {
-        modelName: modelName,
-        azureOpenAIApiKey: getDecryptedKey(customModel.apiKey || settings.azureOpenAIApiKey),
-        azureOpenAIApiInstanceName: settings.azureOpenAIApiInstanceName,
-        azureOpenAIApiDeploymentName: settings.azureOpenAIApiEmbeddingDeploymentName,
-        azureOpenAIApiVersion: settings.azureOpenAIApiVersion,
-        configuration: {
-          baseURL: customModel.baseUrl,
-          fetch: customModel.enableCors ? safeFetch : undefined,
-        },
       },
       [EmbeddingModelProviders.OLLAMA]: {
         baseUrl: customModel.baseUrl || "http://localhost:11434",
@@ -211,41 +252,8 @@ export default class EmbeddingManager {
       },
     };
 
-    // **Crucially, this section is now INSIDE getModelConfig and placed AFTER the initial providerConfig assignment:**
-    let updatedProviderConfig = { ...providerConfig };
-
-    if (customModel.provider === EmbeddingModelProviders.AZURE_OPENAI) {
-      const azureDeploymentName = modelKey.split("|")[1] || "";
-      const azureDeployment = settings.azureOpenAIApiDeployments?.find(
-        (d) => d.deploymentName === azureDeploymentName
-      );
-
-      if (azureDeployment) {
-        const azureConfig = {
-          ...providerConfig[EmbeddingModelProviders.AZURE_OPENAI],
-          modelName: modelName,
-          azureOpenAIApiKey: getDecryptedKey(azureDeployment.apiKey),
-          azureOpenAIApiInstanceName: azureDeployment.instanceName,
-          azureOpenAIApiDeploymentName: azureDeployment.deploymentName,
-          azureOpenAIApiVersion: azureDeployment.apiVersion,
-          configuration: {
-            baseURL: customModel.baseUrl,
-            fetch: customModel.enableCors ? safeFetch : undefined,
-          },
-        };
-
-        // Create new object instead of modifying existing one
-        updatedProviderConfig = {
-          ...updatedProviderConfig,
-          [EmbeddingModelProviders.AZURE_OPENAI]: azureConfig,
-        };
-      } else {
-        console.error(`No Azure OpenAI deployment found for model key: ${modelKey}`);
-      }
-    }
-
     const selectedProviderConfig =
-      updatedProviderConfig[customModel.provider as EmbeddingModelProviders] || {};
+      providerConfig[customModel.provider as EmbeddingModelProviders] || {};
 
     return { ...baseConfig, ...selectedProviderConfig };
   }
@@ -255,7 +263,12 @@ export default class EmbeddingManager {
       const modelKey = `${model.name}|${model.provider}`;
       const config = this.getModelConfig(modelKey, modelToTest);
       const testModel = new (this.getProviderConstructor(modelToTest))(config);
-      await testModel.embedQuery("test");
+      try {
+        await testModel.embedQuery("test");
+      } catch (error) {
+        console.error("Error during ping:", error);
+        throw error;
+      }
     };
 
     try {
