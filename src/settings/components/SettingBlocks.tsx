@@ -295,7 +295,7 @@ const ModelSettingsComponent: React.FC<ModelSettingsComponentProps> = ({
     baseUrl: "",
     apiKey: "",
     enabled: true,
-    isBuiltIn: false,
+    isBuiltIn: false, // Add this property explicitly
     enableCors: false,
   };
   const [newModel, setNewModel] = useState<ChatCustomModel | EmbeddingCustomModel>(emptyModel);

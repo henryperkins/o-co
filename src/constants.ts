@@ -52,6 +52,7 @@ export enum ChatModelProviders {
   OLLAMA = "ollama",
   LM_STUDIO = "lm-studio",
   THIRD_PARTY_OPENAI = "3rd party (openai-format)",
+  OPENAI_FORMAT = "openai-format",
   OPENAI_FORMAT = "3rd party (openai-format)",
 }
 
@@ -146,6 +147,8 @@ export enum EmbeddingModels {
   COHEREAI_EMBED_MULTILINGUAL_LIGHT_V3_0 = "embed-multilingual-light-v3.0",
   GOOGLE_ENG = "text-embedding-004",
 }
+
+import { EmbeddingCustomModel } from "@/types";
 
 export const BUILTIN_EMBEDDING_MODELS: EmbeddingCustomModel[] = [
   {

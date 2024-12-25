@@ -34,6 +34,7 @@ const EMBEDDING_PROVIDER_CONSTRUCTORS = {
   [EmbeddingModelProviders.OLLAMA]: OllamaEmbeddings,
   [EmbeddingModelProviders.LM_STUDIO]: OpenAIEmbeddings,
   [EmbeddingModelProviders.OPENAI_FORMAT]: OpenAIEmbeddings,
+  [EmbeddingModelProviders.THIRD_PARTY_OPENAI]: OpenAIEmbeddings,
 } as const;
 
 type EmbeddingProviderConstructorMap = typeof EMBEDDING_PROVIDER_CONSTRUCTORS;
@@ -59,6 +60,7 @@ export default class EmbeddingManager {
     [EmbeddingModelProviders.OLLAMA]: () => "default-key",
     [EmbeddingModelProviders.LM_STUDIO]: () => "default-key",
     [EmbeddingModelProviders.OPENAI_FORMAT]: () => "",
+    [EmbeddingModelProviders.THIRD_PARTY_OPENAI]: () => "",
   } as const;
 
   private constructor() {
@@ -138,7 +140,7 @@ export default class EmbeddingManager {
   }
 
   getEmbeddingsAPI(): Embeddings {
-    const modelKey = getModelKey();
+    const modelKey = getModelKey(customModel); // Pass the appropriate model object
 
     if (!EmbeddingManager.modelMap.hasOwnProperty(modelKey)) {
       throw new CustomError(`No embedding model found for: ${modelKey}`);

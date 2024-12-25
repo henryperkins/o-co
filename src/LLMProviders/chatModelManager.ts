@@ -152,7 +152,7 @@ export default class ChatModelManager {
 
   private getModelConfig(customModel: CustomModel): ModelConfig {
     const settings = getSettings();
-    const modelKey = getModelKey();
+    const modelKey = getModelKey(customModel); // Pass the appropriate model object
     const modelConfig = settings.modelConfigs[modelKey] || {};
 
     // Check if the model starts with "o1"
@@ -441,7 +441,7 @@ export default class ChatModelManager {
   private validateCurrentModel(): void {
     if (!ChatModelManager.chatModel) return;
 
-    const currentModelKey = getModelKey();
+    const currentModelKey = getModelKey(customModel); // Pass the appropriate model object
     if (!currentModelKey) return;
 
     // Get the model configuration

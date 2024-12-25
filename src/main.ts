@@ -582,7 +582,7 @@ export default class CopilotPlugin extends Plugin {
         // If it's a built-in model, preserve the built-in status
         modelMap.set(key, {
           ...model,
-          isBuiltIn: existingModel.isBuiltIn || model.isBuiltIn,
+          isBuiltIn: existingModel.isBuiltIn || false, // Default to false if not defined
         });
       } else {
         modelMap.set(key, model);
