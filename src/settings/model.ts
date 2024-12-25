@@ -8,6 +8,8 @@ import {
   DEFAULT_OPEN_AREA,
   DEFAULT_SETTINGS,
   DEFAULT_SYSTEM_PROMPT,
+  ChatModelProviders,
+  EmbeddingModelProviders,
 } from "@/constants";
 
 export { DEFAULT_SETTINGS };
@@ -107,10 +109,7 @@ export function setSettings(settings: Partial<CopilotSettings>) {
 /**
  * Sets a single setting in the atom.
  */
-export function updateSetting<K extends keyof CopilotSettings>(
-  key: K,
-  value: CopilotSettings[K]
-) {
+export function updateSetting<K extends keyof CopilotSettings>(key: K, value: CopilotSettings[K]) {
   const settings = getSettings();
   setSettings({ ...settings, [key]: value });
 }
@@ -168,14 +167,10 @@ export function sanitizeSettings(settings: CopilotSettings): CopilotSettings {
 
   // Stuff in settings are string even when the interface has number type!
   const temperature = Number(settingsToSanitize.temperature);
-  sanitizedSettings.temperature = isNaN(temperature)
-    ? DEFAULT_SETTINGS.temperature
-    : temperature;
+  sanitizedSettings.temperature = isNaN(temperature) ? DEFAULT_SETTINGS.temperature : temperature;
 
   const maxTokens = Number(settingsToSanitize.maxTokens);
-  sanitizedSettings.maxTokens = isNaN(maxTokens)
-    ? DEFAULT_SETTINGS.maxTokens
-    : maxTokens;
+  sanitizedSettings.maxTokens = isNaN(maxTokens) ? DEFAULT_SETTINGS.maxTokens : maxTokens;
 
   const contextTurns = Number(settingsToSanitize.contextTurns);
   sanitizedSettings.contextTurns = isNaN(contextTurns)
@@ -187,18 +182,11 @@ export function sanitizeSettings(settings: CopilotSettings): CopilotSettings {
 
 export function getSystemPrompt(): string {
   const userPrompt = getSettings().userSystemPrompt;
-  return userPrompt
-    ? `${DEFAULT_SYSTEM_PROMPT}\n\n${userPrompt}`
-    : DEFAULT_SYSTEM_PROMPT;
+  return userPrompt ? `${DEFAULT_SYSTEM_PROMPT}\n\n${userPrompt}` : DEFAULT_SYSTEM_PROMPT;
 }
 
-function mergeAllActiveModelsWithCoreModels(
-  settings: CopilotSettings
-): CopilotSettings {
-  settings.activeModels = mergeActiveModels(
-    settings.activeModels,
-    BUILTIN_CHAT_MODELS
-  );
+function mergeAllActiveModelsWithCoreModels(settings: CopilotSettings): CopilotSettings {
+  settings.activeModels = mergeActiveModels(settings.activeModels, BUILTIN_CHAT_MODELS);
   settings.activeEmbeddingModels = mergeActiveModels(
     settings.activeEmbeddingModels,
     BUILTIN_EMBEDDING_MODELS
