@@ -90,14 +90,6 @@ export default class ChainManager {
     if (chainType === undefined || chainType === null) throw new Error("No chain type set");
   }
 
-  private validateChatModel() {
-    if (!this.chatModelManager.validateChatModel(this.chatModelManager.getChatModel())) {
-      const errorMsg =
-        "Chat model is not initialized properly, check your API key in Copilot setting and make sure you have API access.";
-      new Notice(errorMsg);
-      throw new Error(errorMsg);
-    }
-  }
 
   private validateChainInitialization() {
     if (!ChainManager.chain || !isSupportedChain(ChainManager.chain)) {
@@ -169,10 +161,13 @@ export default class ChainManager {
   /**
    * Sets the chain, ensuring Azure-specific configurations are initialized if needed.
    */
-  public async setChain(chainType: ChainType, options?: { refreshIndex: boolean }): Promise<void> {
+  public async setChain(
+    chainType: ChainType,
+    options?: { refreshIndex: boolean; prompt?: ChatPromptTemplate; abortController?: AbortController }
+  ): Promise<void> {
     if (!this.chatModelManager.validateChatModel(this.chatModelManager.getChatModel())) {
       console.error("setChain failed: No chat model set.");
-      return;
+      return { embeddingsAPI, db };
     }
 
     this.validateChainType(chainType);
@@ -212,6 +207,7 @@ export default class ChainManager {
           llm: chatModel,
           memory: memory,
           prompt: options?.prompt || chatPrompt,
+          abortController: options?.abortController,
           abortController: options?.abortController,
         }) as RunnableSequence;
 
@@ -328,7 +324,7 @@ export default class ChainManager {
   /**
    * Initializes QA chain, applying Azure-specific settings if necessary.
    */
-  public async initializeQAChain(options?: { refreshIndex: boolean }): Promise<void> {
+  public async initializeQAChain(options?: { refreshIndex: boolean }): Promise<{ embeddingsAPI: Embeddings; db: any }> {
     const embeddingsAPI = this.embeddingsManager.getEmbeddingsAPI();
     if (!embeddingsAPI) {
       throw new Error("Error getting embeddings API. Please check your settings.");
