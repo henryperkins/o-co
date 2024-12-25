@@ -314,6 +314,23 @@ export default class ChatModelManager {
           modelConfig.reasoningEffort
         ),
       },
+      [ChatModelProviders.THIRD_PARTY_OPENAI]: {
+        modelName: modelName,
+        openAIApiKey: getDecryptedKey(customModel.apiKey || settings.openAIApiKey),
+        configuration: {
+          baseURL: customModel.baseUrl,
+          fetch: customModel.enableCors ? safeFetch : undefined,
+          dangerouslyAllowBrowser: true,
+        },
+        ...this.handleOpenAIExtraArgs(
+          isO1Model,
+          isPreviewModel,
+          modelConfig.maxTokens,
+          modelConfig.temperature,
+          modelConfig.maxCompletionTokens,
+          modelConfig.reasoningEffort
+        ),
+      }, // Add this entry
     };
 
     const selectedProviderConfig =
