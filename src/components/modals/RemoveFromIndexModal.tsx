@@ -1,7 +1,7 @@
 import { App, Modal, Setting } from "obsidian";
 
 export class RemoveFromIndexModal extends Modal {
-  private filePaths = "";
+  private filePaths: string[] = [];
   private onSubmit: (filePaths: string[]) => void;
 
   constructor(app: App, onSubmit: (filePaths: string[]) => void) {
@@ -26,9 +26,16 @@ export class RemoveFromIndexModal extends Modal {
       .addTextArea((text) =>
         text
           .setPlaceholder("- [[path/to/file1.md]]\n- [[path/to/file2.md]]")
-          .setValue(this.filePaths)
+          .setValue(this.filePaths.join("\n"))
           .onChange((value) => {
-            this.filePaths = value;
+            this.filePaths = value
+              .split("\n")
+              .map((line) => {
+                // Extract path from markdown list format: "- [[path/to/file.md]]"
+                const match = line.match(/\[\[(.*?)\]\]/);
+                return match ? match[1].trim() : "";
+              })
+              .filter((p) => p.length > 0);
           })
       );
 
@@ -37,15 +44,7 @@ export class RemoveFromIndexModal extends Modal {
         .setButtonText("Remove")
         .setCta()
         .onClick(() => {
-          const paths = this.filePaths
-            .split("\n")
-            .map((line) => {
-              // Extract path from markdown list format: "- [[path/to/file.md]]"
-              const match = line.match(/\[\[(.*?)\]\]/);
-              return match ? match[1].trim() : "";
-            })
-            .filter((p) => p.length > 0);
-          this.onSubmit(paths);
+          this.onSubmit(this.filePaths);
           this.close();
         })
     );

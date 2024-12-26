@@ -3,10 +3,10 @@ import CopilotPlugin from "../../main";
 
 export class OramaSearchModal extends Modal {
   plugin: CopilotPlugin;
-  query = "";
-  textWeight = 0.5;
-  vectorWeight = 0.5;
-  salientTerms = "";
+  query: string = "";
+  textWeight: number = 0.5;
+  vectorWeight: number = 0.5;
+  salientTerms: string = "";
 
   constructor(app: App, plugin: CopilotPlugin) {
     super(app);

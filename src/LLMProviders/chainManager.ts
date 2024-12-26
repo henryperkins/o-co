@@ -36,6 +36,7 @@ import { Orama } from "orama";
 import { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { Callbacks } from "@langchain/core/callbacks/manager";
 import { CustomChatModelCallOptions } from "@/types";
+
 interface ModelValidation {
   isValid: boolean;
   error?: string;
