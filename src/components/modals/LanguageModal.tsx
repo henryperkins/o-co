@@ -77,6 +77,6 @@ export class LanguageModal extends FuzzySuggestModal<Language> {
   }
 
   onChooseItem(language: Language, evt: MouseEvent | KeyboardEvent) {
-    this.onChooseLanguage(language.name);
+    this.onChooseLanguage(language.code);
   }
 }

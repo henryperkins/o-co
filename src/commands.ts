@@ -10,7 +10,7 @@ export function registerBuiltInCommands(plugin: CopilotPlugin) {
   Object.values(COMMAND_IDS).forEach((id) => {
     // removeCommand is not available in TypeScript for some reasons
     // https://docs.obsidian.md/Reference/TypeScript+API/Plugin/removeCommand
-    (plugin as any).removeCommand(id);
+    plugin.removeCommand(id);
   });
 
   const addCommandIfEnabled = (id: string, callback: (editor: Editor) => void) => {

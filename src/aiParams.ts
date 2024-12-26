@@ -1,6 +1,7 @@
 import { ChainType } from "@/chainFactory";
 import { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
+import { TFile } from "obsidian";
 
 import { atom, useAtom } from "jotai";
 import { settingsAtom, settingsStore, getSettings, setSettings } from "@/settings/model";
@@ -51,7 +52,7 @@ const chainTypeAtom = atom(
 export interface SetChainOptions {
   prompt?: ChatPromptTemplate;
   chatModel?: BaseChatModel;
-  noteFile?: any;
+  noteFile?: TFile;
   abortController?: AbortController;
   refreshIndex?: boolean;
 }

@@ -38,9 +38,14 @@ export interface ConversationalRetrievalChainParams {
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export interface Document<T = Record<string, any>> {
-  // Structure of Document, possibly including pageContent, metadata, etc.
+export interface DocumentMetadata {
+  author?: string;
+  title?: string;
+  date?: string;
+  [key: string]: any;
+}
+
+export interface Document<T = DocumentMetadata> {
   pageContent: string;
   metadata: T;
 }

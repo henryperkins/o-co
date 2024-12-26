@@ -1,6 +1,6 @@
 import { App, FuzzySuggestModal, TFile } from "obsidian";
 
-export abstract class BaseNoteModal<T> extends FuzzySuggestModal<T> {
+export abstract class BaseNoteModal<T extends TFile> extends FuzzySuggestModal<T> {
   protected activeNote: TFile | null;
   protected availableNotes: T[];
 
