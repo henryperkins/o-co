@@ -11,7 +11,11 @@ import {
   ToggleComponent,
 } from "./SettingBlocks";
 
-const GeneralSettings: React.FC = () => {
+interface GeneralSettingsProps {
+  app: App;
+}
+
+const GeneralSettings: React.FC<GeneralSettingsProps> = ({ app }) => {
   const settings = useSettingsValue();
 
   const handleUpdateModels = (models: Array<ChatCustomModel>) => {

@@ -3,7 +3,7 @@ import { CustomError } from "@/error";
 import { getSettings, subscribeToSettingsChange } from "@/settings/model";
 import { areEmbeddingModelsSame } from "@/utils";
 import { Embeddings } from "@langchain/core/embeddings";
-import { create, insert, Orama, remove, removeMultiple, search } from "@orama/orama";
+import { create, insert, Orama, remove, removeMultiple, search, AnySchema } from "@orama/orama";
 import { MD5 } from "crypto-js";
 import { App, Notice, Platform } from "obsidian";
 import { ChunkedStorage } from "./chunkedStorage";
@@ -111,7 +111,7 @@ export class DBOperations {
 
       try {
         if (await this.chunkedStorage.exists()) {
-          const loadedDb = await this.chunkedStorage.loadDatabase();
+          const loadedDb = (await this.chunkedStorage.loadDatabase()) as Orama<any>;
           if (!loadedDb.insert || !loadedDb.search) {
             throw new Error("Orama database is not properly initialized.");
           }

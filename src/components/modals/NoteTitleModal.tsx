@@ -1,4 +1,4 @@
-import { App } from "obsidian";
+import { App, TFile } from "obsidian";
 import { BaseNoteModal } from "./BaseNoteModal";
 
 export class NoteTitleModal extends BaseNoteModal<TFile> {

@@ -19,7 +19,7 @@ const SettingsMain: React.FC<SettingsMainProps> = ({ plugin }) => {
         <div>
           Copilot Settings <small>v{plugin.manifest.version}</small>
         </div>
-        <button onClick={() => new ResetSettingsConfirmModal(app, () => resetSettings()).open()}>
+        <button onClick={() => new ResetSettingsConfirmModal(plugin.app, () => resetSettings()).open()}>
           Reset to Default Settings
         </button>
       </h1>

@@ -5,6 +5,7 @@ import {
 } from "@langchain/core/language_models/chat_models";
 import { BaseLanguageModel } from "@langchain/core/language_models/base";
 import { BaseRetriever } from "@langchain/core/retrievers";
+import { TFile } from "obsidian";
 import { BaseChatMemory } from "langchain/memory";
 
 export interface ModelConfig {
