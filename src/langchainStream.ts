@@ -55,5 +55,7 @@ export const getAIResponse = async (
       isVisible: true,
       timestamp: formatDateTime(new Date()),
     });
+  } finally {
+    updateShouldAbort(null);
   }
 };

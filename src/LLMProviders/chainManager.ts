@@ -104,8 +104,8 @@ export default class ChainManager {
   }
 
   private validateChainType(chainType: ChainType): void {
-    if (!chainType) {
-      throw new Error("No chain type set");
+    if (!Object.values(ChainType).includes(chainType)) {
+      throw new Error(`Unsupported chain type: ${chainType}`);
     }
   }
 
