@@ -12,6 +12,7 @@ import React, { useEffect, useState } from "react";
 import ApiSetting from "./ApiSetting";
 import Collapsible from "./Collapsible";
 import { Notice } from "obsidian";
+import { debounce } from "lodash";
 
 export const ApiSettings: React.FC = () => {
   const settings = useSettingsValue();
@@ -75,13 +76,16 @@ export const ApiSettings: React.FC = () => {
     await removeAzureDeployment(index);
   };
 
+  // Debounce the updateModelConfig function
+  const debouncedUpdateModelConfig = debounce(updateModelConfig, 300);
+
   const handleMaxCompletionTokensChange = (value: number) => {
     setMaxCompletionTokens(value);
     let modelKey = `${selectedModel}|${modelProvider}`;
     if (selectedModel === "o1-preview") {
       modelKey = `o1-preview|${selectedDeployment}`;
     }
-    updateModelConfig(modelKey, { maxCompletionTokens: value });
+    debouncedUpdateModelConfig(modelKey, { maxCompletionTokens: value });
   };
 
   const handleReasoningEffortChange = (value: number) => {
@@ -90,7 +94,7 @@ export const ApiSettings: React.FC = () => {
     if (selectedModel === "o1-preview") {
       modelKey = `o1-preview|${selectedDeployment}`;
     }
-    updateModelConfig(modelKey, { reasoningEffort: value });
+    debouncedUpdateModelConfig(modelKey, { reasoningEffort: value });
   };
 
   return (

@@ -1,7 +1,6 @@
 import { ResetSettingsConfirmModal } from "@/components/modals/ResetSettingsConfirmModal";
 import CopilotPlugin from "@/main";
 import { resetSettings } from "@/settings/model";
-import { App } from "obsidian";
 import React from "react";
 import AdvancedSettings from "./AdvancedSettings";
 import { ApiSettings } from "./ApiSettings";

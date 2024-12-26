@@ -108,9 +108,12 @@ export function setSettings(settings: Partial<CopilotSettings>) {
 /**
  * Sets a single setting in the atom.
  */
-export function updateSetting<K extends keyof CopilotSettings>(key: K, value: CopilotSettings[K]) {
+export async function updateSetting<K extends keyof CopilotSettings>(
+  key: K,
+  value: CopilotSettings[K]
+) {
   const settings = getSettings();
-  setSettings({ ...settings, [key]: value });
+  await setSettings({ ...settings, [key]: value });
 }
 
 /**
