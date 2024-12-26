@@ -1,5 +1,3 @@
-// src/settings/model.ts
-
 import { CustomModel, ChatCustomModel, EmbeddingCustomModel, AzureOpenAIDeployment } from "@/types";
 import { atom, createStore, useAtomValue } from "jotai";
 

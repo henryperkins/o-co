@@ -152,6 +152,7 @@ export default class ChainManager {
     } catch (error) {
       console.error("createChainWithNewModel failed: ", error);
       console.log("modelKey:", newModelKey);
+      new Notice(`Error creating model: ${newModelKey}. Please check your API key settings.`);
     }
   }
 
@@ -412,10 +413,43 @@ export default class ChainManager {
 
     if (debug) console.log("==== Step 0: Initial user message ====\n", userMessage);
 
-    this.validateChatModel();
-    this.validateChainInitialization();
+    try {
+      this.validateChatModel();
+    } catch (error) {
+      addMessage({
+        sender: "system",
+        message: `Error: ${error.message}`,
+        isVisible: true,
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
 
-    const chatModel = this.chatModelManager.getChatModel();
+    try {
+      this.validateChainInitialization();
+    } catch (error) {
+      addMessage({
+        sender: "system",
+        message: `Error: ${error.message}`,
+        isVisible: true,
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+
+    let chatModel;
+    try {
+      chatModel = this.chatModelManager.getChatModel();
+    } catch (error) {
+      addMessage({
+        sender: "system",
+        message: `Error: ${error.message}`,
+        isVisible: true,
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+
     const modelName = (chatModel as any).modelName || (chatModel as any).model || "";
     const isO1PreviewModel = modelName === "o1-preview";
 
