@@ -27,7 +27,6 @@ import {
 import { RunnableSequence } from "@langchain/core/runnables";
 import { App, Notice } from "obsidian";
 import { formatDateTime } from "@/utils";
-import { FormattedDateTime } from "@/utils";
 import { BrevilabsClient } from "./brevilabsClient";
 import ChatModelManager from "./chatModelManager";
 import EmbeddingsManager from "./embeddingManager";

@@ -112,8 +112,8 @@ export class DBOperations {
       try {
         if (await this.chunkedStorage.exists()) {
           const loadedDb = (await this.chunkedStorage.loadDatabase()) as unknown as Orama<any> & {
-            insert: Function;
-            search: Function;
+            insert: (...args: any[]) => any;
+            search: (...args: any[]) => any;
           };
           if (typeof loadedDb.insert !== "function" || typeof loadedDb.search !== "function") {
             throw new Error("Orama database is not properly initialized.");
