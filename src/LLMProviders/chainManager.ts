@@ -427,7 +427,7 @@ export default class ChainManager {
         sender: "system",
         message: `Error: ${error.message}`,
         isVisible: true,
-        timestamp: { isoString: new Date().toISOString() } as FormattedDateTime,
+        timestamp: formatDateTime(new Date()),
       });
       return;
     }
