@@ -7,6 +7,7 @@ import { BaseLanguageModel } from "@langchain/core/language_models/base";
 import { BaseRetriever } from "@langchain/core/retrievers";
 import { TFile } from "obsidian";
 import { BaseChatMemory } from "langchain/memory";
+import { ChatModelProviders, EmbeddingModelProviders } from "./constants";
 
 export interface ModelConfig {
   modelName: string;
@@ -18,7 +19,7 @@ export interface ModelConfig {
   presencePenalty?: number;
   frequencyPenalty?: number;
   topP?: number;
-  maxOutputTokens?: number;
+  maxCompletionTokens?: number;
   openAIApiKey?: string;
   openAIOrgId?: string;
   anthropicApiKey?: string;
@@ -115,32 +116,6 @@ export interface ModelConfiguration {
 export interface ChainCallbackManager {
   handleAbort?: () => void;
   handleError?: (error: Error) => void;
-}
-
-export enum ChatModelProviders {
-  OPENAI = "openai",
-  AZURE_OPENAI = "azure_openai",
-  ANTHROPIC = "anthropic",
-  COHEREAI = "cohereai",
-  GOOGLE = "google",
-  OPENROUTERAI = "openrouterai",
-  GROQ = "groq",
-  OLLAMA = "ollama",
-  LM_STUDIO = "lm-studio",
-  THIRD_PARTY_OPENAI = "3rd party (openai-format)",
-  OPENAI_FORMAT = "openai-format",
-}
-
-export enum EmbeddingModelProviders {
-  OPENAI = "openai",
-  COHEREAI = "cohereai",
-  GOOGLE = "google",
-  AZURE_OPENAI = "azure_openai", // Note the underscore
-  OLLAMA = "ollama",
-  LM_STUDIO = "lm-studio",
-  THIRD_PARTY_OPENAI = "3rd party (openai-format)",
-  OPENAI_FORMAT = "openai-format",
-  COPILOT_PLUS = "copilot-plus",
 }
 
 /**

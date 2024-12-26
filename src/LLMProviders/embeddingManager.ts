@@ -232,7 +232,7 @@ export default class EmbeddingManager {
       },
     };
 
-    const azureDeployment = settings.azureOpenAIApiDeployments?.[0];
+    const azureDeployment = settings.azureOpenAIApiDeployments? [0];
     if (azureDeployment) {
       const azureConfig = providerConfig[EmbeddingModelProviders.AZURE_OPENAI];
       if (azureConfig) {

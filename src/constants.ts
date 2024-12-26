@@ -60,7 +60,7 @@ export enum EmbeddingModelProviders {
   OPENAI = "openai",
   COHEREAI = "cohereai",
   GOOGLE = "google",
-  AZURE_OPENAI = "azure_openai",
+  AZURE_OPENAI = "azure_openai", // Note the underscore
   OLLAMA = "ollama",
   LM_STUDIO = "lm-studio",
   THIRD_PARTY_OPENAI = "3rd party (openai-format)",

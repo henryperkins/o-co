@@ -215,7 +215,7 @@ export default class ChatModelManager {
         modelName: customModel.name,
         openAIApiKey: getDecryptedKey(customModel.apiKey || settings.openAIApiKey),
         configuration: {
-          baseURL: customModel.baseUrl,
+          baseURL: customModel
           fetch: customModel.enableCors ? safeFetch : undefined,
           dangerouslyAllowBrowser: true,
         },
@@ -232,12 +232,15 @@ export default class ChatModelManager {
     const selectedProviderConfig =
       providerConfig[customModel.provider as keyof typeof providerConfig] || {};
 
-    return {
+    const modelConfigToReturn = {
       ...baseConfig,
       ...selectedProviderConfig,
       temperature:
         "temperature" in selectedProviderConfig ? (selectedProviderConfig.temperature ?? 1) : 1, // Default to 1 if undefined
     };
+
+    console.log("getModelConfig returning:", modelConfigToReturn); // Log the complete config
+    return modelConfigToReturn;
   }
 
   private handleOpenAIExtraArgs(

@@ -1,3 +1,4 @@
+
 import { BrevilabsClient } from "@/LLMProviders/brevilabsClient";
 import ChainManager from "@/LLMProviders/chainManager";
 import EmbeddingsManager from "@/LLMProviders/embeddingManager";
@@ -398,8 +399,6 @@ export default class CopilotPlugin extends Plugin {
           } else {
             await this.app.vault.create(filePath, content);
           }
-
-          // Open the file
           const file = this.app.vault.getAbstractFileByPath(filePath);
           if (file instanceof TFile) {
             await this.app.workspace.getLeaf().openFile(file);

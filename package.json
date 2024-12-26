@@ -100,5 +100,13 @@
   },
   "directories": {
     "test": "tests"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/henryperkins/o-co.git"
+  },
+  "bugs": {
+    "url": "https://github.com/henryperkins/o-co/issues"
+  },
+  "homepage": "https://github.com/henryperkins/o-co#readme"
 }
