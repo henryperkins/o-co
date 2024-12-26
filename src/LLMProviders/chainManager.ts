@@ -26,6 +26,7 @@ import {
 } from "@langchain/core/prompts";
 import { RunnableSequence } from "@langchain/core/runnables";
 import { App, Notice } from "obsidian";
+import { FormattedDateTime } from "@/sharedState";
 import { BrevilabsClient } from "./brevilabsClient";
 import ChatModelManager from "./chatModelManager";
 import EmbeddingsManager from "./embeddingManager";
@@ -391,7 +392,7 @@ export default class ChainManager {
 
     const db = (await this.vectorStoreManager.getOrInitializeDb(
       embeddingsAPI
-    )) as Orama<any>; // Ensure proper initialization
+    )) as unknown as Orama<any>; // Ensure proper initialization
     if (!db || typeof db !== "object") {
       throw new Error("Failed to initialize Orama database. Please check your configuration.");
     }
@@ -438,7 +439,7 @@ export default class ChainManager {
         sender: "system",
         message: `Error: ${error.message}`,
         isVisible: true,
-        timestamp: new Date().toISOString(),
+        timestamp: { isoString: new Date().toISOString() } as FormattedDateTime,
       });
       return;
     }

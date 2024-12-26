@@ -10,7 +10,7 @@ import { TimeInfo } from "@/tools/TimeTools";
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 
-const localSearchTool = tool(
+const localSearchTool = (app: App) => tool(
   async ({
     timeRange,
     query,
