@@ -111,14 +111,14 @@ export class DBOperations {
 
       try {
         if (await this.chunkedStorage.exists()) {
-          const loadedDb = (await this.chunkedStorage.loadDatabase()) as unknown as {
+          const loadedDb = (await this.chunkedStorage.loadDatabase()) as unknown as Orama<any> & {
             insert: Function;
             search: Function;
           };
           if (typeof loadedDb.insert !== "function" || typeof loadedDb.search !== "function") {
             throw new Error("Orama database is not properly initialized.");
           }
-          this.oramaDb = loadedDb;
+          this.oramaDb = loadedDb as Orama<any>;
           console.log("Loaded existing chunked Orama database from disk.");
           this.isIndexLoaded = true;
           return this.oramaDb;
