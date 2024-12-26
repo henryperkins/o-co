@@ -34,7 +34,7 @@ const localSearchTool = tool(
     }
 
     const embeddingsManager = EmbeddingsManager.getInstance();
-    const vault = this.app.vault;
+    const vault = app.vault;
     const embeddingInstance = embeddingsManager?.getEmbeddingsAPI();
 
     if (!embeddingInstance) {

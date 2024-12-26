@@ -7,6 +7,7 @@ import {
 } from "@/constants";
 import VectorStoreManager from "@/search/vectorStoreManager";
 import { updateSetting, useSettingsValue } from "@/settings/model";
+import { App } from "obsidian";
 import React from "react";
 import {
   DropdownComponent,

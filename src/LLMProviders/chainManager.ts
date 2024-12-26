@@ -389,7 +389,9 @@ export default class ChainManager {
       throw new Error("Embeddings API is not available. Please check your settings.");
     }
 
-    const db = await this.vectorStoreManager.getOrInitializeDb(embeddingsAPI); // Ensure proper initialization
+    const db = (await this.vectorStoreManager.getOrInitializeDb(
+      embeddingsAPI
+    )) as Orama<any>; // Ensure proper initialization
     if (!db || typeof db !== "object") {
       throw new Error("Failed to initialize Orama database. Please check your configuration.");
     }
@@ -424,7 +426,7 @@ export default class ChainManager {
         sender: "system",
         message: `Error: ${error.message}`,
         isVisible: true,
-        timestamp: new Date().toISOString(),
+        timestamp: { isoString: new Date().toISOString() } as FormattedDateTime,
       });
       return;
     }

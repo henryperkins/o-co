@@ -1,6 +1,7 @@
 import { ResetSettingsConfirmModal } from "@/components/modals/ResetSettingsConfirmModal";
 import CopilotPlugin from "@/main";
 import { resetSettings } from "@/settings/model";
+import { App } from "obsidian";
 import React from "react";
 import AdvancedSettings from "./AdvancedSettings";
 import { ApiSettings } from "./ApiSettings";
@@ -25,9 +26,9 @@ const SettingsMain: React.FC<SettingsMainProps> = ({ plugin }) => {
       </h1>
 
       <CopilotPlusSettings />
-      <GeneralSettings />
+      <GeneralSettings app={plugin.app} />
       <ApiSettings />
-      <QASettings vectorStoreManager={plugin.vectorStoreManager} />
+      <QASettings app={plugin.app} vectorStoreManager={plugin.vectorStoreManager} />
       <AdvancedSettings />
     </div>
   );

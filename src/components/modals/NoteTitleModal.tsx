@@ -7,21 +7,21 @@ export class NoteTitleModal extends BaseNoteModal<TFile> {
   constructor(app: App, noteTitles: string[], onChooseNoteTitle: (noteTitle: string) => void) {
     super(app);
     this.onChooseNoteTitle = onChooseNoteTitle;
-    this.availableNotes = this.getOrderedNotes()
-      .filter((file) => file.extension === "md")
-      .map((file) => file.basename);
+    this.availableNotes = this.getOrderedNotes().filter(
+      (file) => file.extension === "md"
+    );
   }
 
-  getItems(): string[] {
+  getItems(): TFile[] {
     return this.availableNotes;
   }
 
-  getItemText(noteTitle: string): string {
-    const isActive = noteTitle === this.activeNote?.basename;
-    return this.formatNoteTitle(noteTitle, isActive);
+  getItemText(note: TFile): string {
+    const isActive = note === this.activeNote;
+    return this.formatNoteTitle(note.basename, isActive);
   }
 
-  onChooseItem(noteTitle: string, evt: MouseEvent | KeyboardEvent) {
-    this.onChooseNoteTitle(noteTitle);
+  onChooseItem(note: TFile, evt: MouseEvent | KeyboardEvent) {
+    this.onChooseNoteTitle(note.basename);
   }
 }
