@@ -4,11 +4,14 @@ import { USER_SENDER } from "@/constants";
 import { ChatMessage } from "@/sharedState";
 import { MemoryVariables } from "@langchain/core/memory";
 import { RunnableSequence } from "@langchain/core/runnables";
-import { BaseChain, RetrievalQAChain } from "langchain/chains";
+import { BaseChain } from "langchain/chains";
 import moment from "moment";
 import { TFile, Vault, parseYaml, requestUrl } from "obsidian";
 import { ChatCustomModel, EmbeddingCustomModel } from "@/types";
 
+interface SafeFetchOptions extends RequestInit {
+  enableStreaming?: boolean;
+}
 export const getModelNameFromKey = (modelKey: string): string => {
   return modelKey.split("|")[0];
 };
@@ -172,13 +175,13 @@ export const isLLMChain = (chain: RunnableSequence): chain is RunnableSequence =
   return (chain as any).last.bound.modelName || (chain as any).last.bound.model;
 };
 
-export const isRetrievalQAChain = (chain: BaseChain): chain is RetrievalQAChain => {
+export const isCreateRetrievalChain = (chain: BaseChain): chain is BaseChain => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (chain as any).last.bound.retriever !== undefined;
 };
 
 export const isSupportedChain = (chain: RunnableSequence): chain is RunnableSequence => {
-  return isLLMChain(chain) || isRetrievalQAChain(chain);
+  return isLLMChain(chain) || isCreateRetrievalChain(chain);
 };
 
 export function isChatCustomModel(
@@ -546,66 +549,57 @@ export function extractYoutubeUrl(text: string): string | null {
 /** Proxy function to use in place of fetch() to bypass CORS restrictions.
  * It currently doesn't support streaming until this is implemented
  * https://forum.obsidian.md/t/support-streaming-the-request-and-requesturl-response-body/87381 */
-export async function safeFetch(url: string, options: RequestInit): Promise<Response> {
-  // Necessary to remove 'content-length' in order to make headers compatible with requestUrl()
-  delete (options.headers as Record<string, string>)["content-length"];
+export async function safeFetch(url: string, options: SafeFetchOptions): Promise<Response> {
+  // Clean up headers
+  const headers = { ...(options.headers as Record<string, string>) };
+  delete headers["content-length"];
 
-  if (typeof options.body === "string") {
-    const newBody = JSON.parse(options.body ?? {});
-    // frequency_penalty: default 0, but perplexity.ai requires 1 by default.
-    // so, delete this argument for now
-    delete newBody["frequency_penalty"];
-    options.body = JSON.stringify(newBody);
+  // Parse and clean body if present
+  let body = options.body;
+  if (typeof body === "string") {
+    try {
+      const parsedBody = JSON.parse(body);
+      delete parsedBody["frequency_penalty"];
+      body = JSON.stringify(parsedBody);
+    } catch (e) {
+      console.warn("Failed to parse request body:", e);
+    }
   }
 
   const method = options.method?.toLowerCase() || "post";
-  const methodsWithBody = ["post", "put", "patch"];
+
+  // Make request using Obsidian's API
   const response = await requestUrl({
     url,
     contentType: "application/json",
-    headers: options.headers as Record<string, string>,
-    method: method,
-    ...(methodsWithBody.includes(method) && { body: options.body?.toString() }),
+    headers,
+    method,
+    ...(["post", "put", "patch"].includes(method) && { body: body?.toString() }),
   });
 
-  return {
-    ok: response.status >= 200 && response.status < 300,
+  // If streaming is requested, use ReadableStream
+  if (options.enableStreaming) {
+    return new Response(createReadableStream(response.text), {
+      status: response.status,
+      statusText: response.status.toString(),
+      headers: new Headers(response.headers),
+    });
+  }
+
+  // Regular response
+  return new Response(response.text, {
     status: response.status,
     statusText: response.status.toString(),
     headers: new Headers(response.headers),
-    url: url,
-    type: "basic",
-    redirected: false,
-    body: createReadableStreamFromString(response.text),
-    bodyUsed: true,
-    json: () => response.json,
-    text: async () => response.text,
-    clone: () => {
-      throw new Error("not implemented");
-    },
-    arrayBuffer: () => {
-      throw new Error("not implemented");
-    },
-    blob: () => {
-      throw new Error("not implemented");
-    },
-    formData: () => {
-      throw new Error("not implemented");
-    },
-  };
+  });
 }
 
-function createReadableStreamFromString(input: string) {
+// Private helper for streaming responses
+function createReadableStream(input: string): ReadableStream<Uint8Array> {
   return new ReadableStream({
     start(controller) {
-      // Convert the input string to a Uint8Array
       const encoder = new TextEncoder();
-      const uint8Array = encoder.encode(input);
-
-      // Push the data to the stream
-      controller.enqueue(uint8Array);
-
-      // Close the stream
+      controller.enqueue(encoder.encode(input));
       controller.close();
     },
   });

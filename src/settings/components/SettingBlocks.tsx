@@ -1,10 +1,5 @@
-import {
-  CustomModel,
-  ChatCustomModel,
-  EmbeddingCustomModel,
-  ChatModelProviders,
-  EmbeddingModelProviders,
-} from "../../types";
+import { CustomModel, ChatCustomModel, EmbeddingCustomModel } from "../../types";
+import { EmbeddingModelProviders, ChatModelProviders } from "@/constants";
 import ChatModelManager from "../../LLMProviders/chatModelManager";
 import EmbeddingManager from "../../LLMProviders/embeddingManager";
 import { App, Notice } from "obsidian";

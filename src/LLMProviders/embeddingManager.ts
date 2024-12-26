@@ -1,4 +1,4 @@
-import { EmbeddingCustomModel, getModelKey, EmbeddingModelProviders } from "@/types";
+import { EmbeddingCustomModel, getModelKey } from "@/types";
 import { getDecryptedKey } from "@/encryptionService";
 import { CustomError } from "@/error";
 import { getSettings, subscribeToSettingsChange } from "@/settings/model";
@@ -9,11 +9,102 @@ import { GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
 import { OllamaEmbeddings } from "@langchain/ollama";
 import { OpenAIEmbeddings } from "@langchain/openai";
 import { Notice } from "obsidian";
-import { BREVILABS_API_BASE_URL } from "@/constants";
+import { BREVILABS_API_BASE_URL, EmbeddingModelProviders } from "@/constants";
 
+// --- Constants ---
+const DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434";
+const DEFAULT_LM_STUDIO_BASE_URL = "http://localhost:1234/v1";
+const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
+const DEFAULT_API_KEY = "";
+
+// --- Types and Interfaces ---
 type EmbeddingConstructorType = new (config: any) => Embeddings;
 
-const EMBEDDING_PROVIDER_CONSTRUCTORS = {
+interface BaseConfig {
+  maxRetries: number;
+  maxConcurrency: number;
+}
+
+interface BaseProviderConfig {
+  type: EmbeddingModelProviders;
+  modelName: string;
+  maxRetries: number;
+  maxConcurrency: number;
+}
+
+interface OpenAIProviderConfig extends BaseProviderConfig {
+  type:
+    | EmbeddingModelProviders.OPENAI
+    | EmbeddingModelProviders.COPILOT_PLUS
+    | EmbeddingModelProviders.LM_STUDIO
+    | EmbeddingModelProviders.OPENAI_FORMAT
+    | EmbeddingModelProviders.THIRD_PARTY_OPENAI;
+  openAIApiKey: string;
+  timeout?: number;
+  configuration?: {
+    baseURL?: string;
+    fetch?: typeof safeFetch;
+    dangerouslyAllowBrowser?: boolean;
+  };
+}
+
+interface CohereAIProviderConfig extends BaseProviderConfig {
+  type: EmbeddingModelProviders.COHEREAI;
+  apiKey?: string;
+}
+
+interface GoogleProviderConfig extends BaseProviderConfig {
+  type: EmbeddingModelProviders.GOOGLE;
+  apiKey?: string;
+}
+
+interface AzureDeployment {
+  apiKey: string;
+  instanceName: string;
+  deploymentName: string;
+  apiVersion: string;
+  isEnabled: boolean;
+}
+
+interface AzureProviderConfig extends BaseProviderConfig {
+  type: EmbeddingModelProviders.AZURE_OPENAI;
+  azureOpenAIApiKey?: string;
+  azureOpenAIApiInstanceName?: string;
+  azureOpenAIApiDeploymentName?: string;
+  azureOpenAIApiVersion?: string;
+  configuration?: {
+    baseURL?: string;
+    fetch?: typeof safeFetch;
+  };
+}
+
+interface OllamaProviderConfig extends BaseProviderConfig {
+  type: EmbeddingModelProviders.OLLAMA;
+  baseUrl?: string;
+}
+
+type ProviderConfig =
+  | OpenAIProviderConfig
+  | CohereAIProviderConfig
+  | GoogleProviderConfig
+  | AzureProviderConfig
+  | OllamaProviderConfig;
+
+type ProviderConfigMap = Partial<Record<EmbeddingModelProviders, ProviderConfig>>;
+
+export interface Settings {
+  azureOpenAIApiDeployments?: Array<AzureDeployment>;
+  azureOpenAIApiInstanceName?: string;
+  azureOpenAIApiDeploymentName?: string;
+  azureOpenAIApiVersion?: string;
+  plusLicenseKey?: string;
+  openAIApiKey: string;
+  cohereApiKey?: string;
+  googleApiKey?: string;
+  fireworksApiKey?: string;
+}
+
+const EMBEDDING_PROVIDER_CONSTRUCTORS: Record<EmbeddingModelProviders, EmbeddingConstructorType> = {
   [EmbeddingModelProviders.COPILOT_PLUS]: OpenAIEmbeddings,
   [EmbeddingModelProviders.OPENAI]: OpenAIEmbeddings,
   [EmbeddingModelProviders.COHEREAI]: CohereEmbeddings,
@@ -25,8 +116,7 @@ const EMBEDDING_PROVIDER_CONSTRUCTORS = {
   [EmbeddingModelProviders.OPENAI_FORMAT]: OpenAIEmbeddings,
 } as const;
 
-type EmbeddingProviderConstructorMap = typeof EMBEDDING_PROVIDER_CONSTRUCTORS;
-
+// --- EmbeddingManager Class ---
 export default class EmbeddingManager {
   private activeEmbeddingModels: EmbeddingCustomModel[] = [];
   private static instance: EmbeddingManager;
@@ -58,7 +148,7 @@ export default class EmbeddingManager {
   }
 
   private initialize() {
-    const settings = getSettings(); // Fetch updated settings
+    const settings = getSettings();
     this.activeEmbeddingModels = settings.activeEmbeddingModels;
     this.buildModelMap(this.activeEmbeddingModels);
   }
@@ -71,8 +161,10 @@ export default class EmbeddingManager {
   }
 
   getProviderConstructor(model: EmbeddingCustomModel): EmbeddingConstructorType {
-    const provider = model.provider as EmbeddingModelProviders;
-    const constructor = EMBEDDING_PROVIDER_CONSTRUCTORS[provider];
+    if (!this.validateProvider(model.provider)) {
+      throw new Error(`Unknown provider: ${model.provider} for model: ${model.name}`);
+    }
+    const constructor = EMBEDDING_PROVIDER_CONSTRUCTORS[model.provider];
     if (!constructor) {
       throw new Error(`Unknown provider: ${model.provider} for model: ${model.name}`);
     }
@@ -84,23 +176,23 @@ export default class EmbeddingManager {
     const modelMap = EmbeddingManager.modelMap;
 
     activeEmbeddingModels.forEach((model) => {
-      if (
-        !Object.values(EmbeddingModelProviders).includes(model.provider as EmbeddingModelProviders)
-      ) {
+      if (!this.validateProvider(model.provider)) {
         console.warn(`Invalid provider: ${model.provider} for embedding model: ${model.name}`);
         return; // Skip invalid models
       }
-
       if (model.enabled) {
         const constructor = this.getProviderConstructor(model);
         const apiKey =
-          model.apiKey || this.providerApiKeyMap[model.provider as EmbeddingModelProviders]();
+          model.apiKey ||
+          (this.providerApiKeyMap[model.provider]
+            ? this.providerApiKeyMap[model.provider]()
+            : undefined);
 
         const modelKey = `${model.name}|${model.provider}`;
         modelMap[modelKey] = {
           hasApiKey: Boolean(apiKey),
           EmbeddingConstructor: constructor,
-          vendor: model.provider as EmbeddingModelProviders,
+          vendor: model.provider,
         };
       }
     });
@@ -127,7 +219,8 @@ export default class EmbeddingManager {
   }
 
   getEmbeddingsAPI(): Embeddings {
-    const modelKey = getModelKey(this.getActiveEmbeddingModel()); // Pass a valid model instance
+    const customModel = this.getActiveEmbeddingModel();
+    const modelKey = getModelKey(customModel);
 
     if (!EmbeddingManager.modelMap.hasOwnProperty(modelKey)) {
       throw new CustomError(`No embedding model found for: ${modelKey}`);
@@ -138,92 +231,140 @@ export default class EmbeddingManager {
       throw new CustomError(`API key is not provided for the embedding model: ${modelKey}`);
     }
 
-    const customModel = this.getActiveEmbeddingModel();
-    const config = this.getModelConfig(modelKey, customModel);
+    const config = this.getModelConfig(customModel);
 
     try {
       EmbeddingManager.embeddingModel = new selectedModel.EmbeddingConstructor(config);
       return EmbeddingManager.embeddingModel;
-    } catch (error) {
+    } catch (error: any) {
       throw new CustomError(`Error creating embedding model: ${modelKey}. ${error.message}`);
     }
   }
 
-  private getModelConfig(modelKey: string, customModel: EmbeddingCustomModel): any {
-    const settings = getSettings();
-    const modelName = customModel.name;
+  private getAzureConfig(
+    customModel: EmbeddingCustomModel,
+    settings: Settings
+  ): AzureDeployment | undefined {
+    if (customModel.provider !== EmbeddingModelProviders.AZURE_OPENAI) {
+      return undefined;
+    }
 
-    const baseConfig = {
+    const modelKey = getModelKey(customModel);
+    let azureDeployment: AzureDeployment | undefined;
+
+    if (modelKey.startsWith("o1-preview")) {
+      const deploymentName = modelKey.split("|")[1] || "";
+      azureDeployment = settings.azureOpenAIApiDeployments?.find(
+        (d) => d.deploymentName === deploymentName && d.isEnabled
+      );
+    } else {
+      azureDeployment = settings.azureOpenAIApiDeployments?.find((d) => d.isEnabled);
+    }
+
+    if (!azureDeployment) {
+      const errorMessage =
+        "Azure deployment not found for the selected model key. Please check your settings.";
+      console.error(errorMessage, getModelKey(customModel));
+      throw new Error(errorMessage);
+    }
+
+    return azureDeployment;
+  }
+
+  private getModelConfig(customModel: EmbeddingCustomModel): ProviderConfig {
+    if (!this.validateProvider(customModel.provider)) {
+      throw new CustomError(`Provider ${customModel.provider} is not recognized`);
+    }
+    const settings = getSettings();
+
+    const baseConfig: BaseConfig = {
       maxRetries: 3,
       maxConcurrency: 3,
     };
 
-    // Handle provider-specific configurations
-    const providerConfig: {
-      [K in keyof EmbeddingProviderConstructorMap]: ConstructorParameters<
-        EmbeddingProviderConstructorMap[K]
-      >[0];
-    } = {
+    const azureDeployment = this.getAzureConfig(customModel, settings);
+
+    // Validate Azure deployment configuration
+    this.validateAzureConfig(azureDeployment);
+
+    const providerConfigs: Partial<ProviderConfigMap> = {
       [EmbeddingModelProviders.COPILOT_PLUS]: {
-        modelName,
-        apiKey: getDecryptedKey(settings.plusLicenseKey),
+        type: EmbeddingModelProviders.COPILOT_PLUS,
+        ...baseConfig,
+        modelName: customModel.name,
+        openAIApiKey: getDecryptedKey(settings.plusLicenseKey) || DEFAULT_API_KEY,
         timeout: 10000,
         configuration: {
           baseURL: BREVILABS_API_BASE_URL,
           fetch: customModel.enableCors ? safeFetch : undefined,
         },
       },
-      [EmbeddingModelProviders.OPENAI]: {
-        modelName,
-        openAIApiKey: getDecryptedKey(customModel.apiKey || settings.openAIApiKey),
-        timeout: 10000,
+      [EmbeddingModelProviders.AZURE_OPENAI]: {
+        type: EmbeddingModelProviders.AZURE_OPENAI,
+        ...baseConfig,
+        modelName: customModel.name,
+        azureOpenAIApiKey: azureDeployment?.apiKey
+          ? getDecryptedKey(azureDeployment.apiKey)
+          : undefined,
+        azureOpenAIApiInstanceName: azureDeployment?.instanceName,
+        azureOpenAIApiDeploymentName: azureDeployment?.deploymentName,
+        azureOpenAIApiVersion: azureDeployment?.apiVersion,
         configuration: {
           baseURL: customModel.baseUrl,
           fetch: customModel.enableCors ? safeFetch : undefined,
         },
+      },
+      [EmbeddingModelProviders.OPENAI]: {
+        type: EmbeddingModelProviders.OPENAI,
+        ...baseConfig,
+        modelName: customModel.name,
+        openAIApiKey:
+          getDecryptedKey(customModel.apiKey || settings.openAIApiKey) || DEFAULT_API_KEY,
       },
       [EmbeddingModelProviders.COHEREAI]: {
-        model: modelName,
-        apiKey: getDecryptedKey(customModel.apiKey || settings.cohereApiKey),
+        type: EmbeddingModelProviders.COHEREAI,
+        ...baseConfig,
+        modelName: customModel.name,
+        apiKey: getDecryptedKey(customModel.apiKey || settings.cohereApiKey) || DEFAULT_API_KEY,
       },
       [EmbeddingModelProviders.GOOGLE]: {
-        modelName,
-        apiKey: getDecryptedKey(settings.googleApiKey),
-      },
-      [EmbeddingModelProviders.AZURE_OPENAI]: {
-        modelName,
-        azureOpenAIApiKey: getDecryptedKey(customModel.apiKey || settings.azureOpenAIApiKey),
-        azureOpenAIApiInstanceName: settings.azureOpenAIApiInstanceName,
-        azureOpenAIApiDeploymentName: settings.azureOpenAIApiDeploymentName,
-        azureOpenAIApiVersion: settings.azureOpenAIApiVersion,
-        configuration: {
-          baseURL: customModel.baseUrl,
-          fetch: customModel.enableCors ? safeFetch : undefined,
-        },
+        type: EmbeddingModelProviders.GOOGLE,
+        ...baseConfig,
+        modelName: customModel.name,
+        apiKey: getDecryptedKey(settings.googleApiKey) || DEFAULT_API_KEY,
       },
       [EmbeddingModelProviders.OLLAMA]: {
-        baseUrl: customModel.baseUrl || "http://localhost:11434",
-        model: modelName,
+        type: EmbeddingModelProviders.OLLAMA,
+        ...baseConfig,
+        modelName: customModel.name,
+        baseUrl: customModel.baseUrl || DEFAULT_OLLAMA_BASE_URL,
       },
       [EmbeddingModelProviders.LM_STUDIO]: {
-        modelName,
+        type: EmbeddingModelProviders.LM_STUDIO,
+        ...baseConfig,
+        modelName: customModel.name,
+        openAIApiKey: DEFAULT_API_KEY,
         configuration: {
-          baseURL: customModel.baseUrl || "http://localhost:1234/v1",
+          baseURL: customModel.baseUrl || DEFAULT_LM_STUDIO_BASE_URL,
           fetch: customModel.enableCors ? safeFetch : undefined,
         },
       },
       [EmbeddingModelProviders.OPENAI_FORMAT]: {
-        modelName,
-        openAIApiKey: getDecryptedKey(customModel.apiKey || ""),
+        type: EmbeddingModelProviders.OPENAI_FORMAT,
+        ...baseConfig,
+        modelName: customModel.name,
+        openAIApiKey: getDecryptedKey(customModel.apiKey || DEFAULT_API_KEY),
         configuration: {
-          baseURL: customModel.baseUrl,
+          baseURL: customModel.baseUrl || DEFAULT_OPENAI_BASE_URL,
           fetch: customModel.enableCors ? safeFetch : undefined,
           dangerouslyAllowBrowser: true,
         },
       },
       [EmbeddingModelProviders.THIRD_PARTY_OPENAI]: {
-        modelName,
-        openAIApiKey: getDecryptedKey(customModel.apiKey || ""),
+        type: EmbeddingModelProviders.THIRD_PARTY_OPENAI,
+        ...baseConfig,
+        modelName: customModel.name,
+        openAIApiKey: getDecryptedKey(customModel.apiKey || DEFAULT_API_KEY),
         configuration: {
           baseURL: customModel.baseUrl,
           fetch: customModel.enableCors ? safeFetch : undefined,
@@ -232,30 +373,62 @@ export default class EmbeddingManager {
       },
     };
 
-    const azureDeployment = settings.azureOpenAIApiDeployments? [0];
-    if (azureDeployment) {
-      const azureConfig = providerConfig[EmbeddingModelProviders.AZURE_OPENAI];
-      if (azureConfig) {
-        azureConfig.azureOpenAIApiKey = getDecryptedKey(azureDeployment.apiKey);
-        azureConfig.azureOpenAIApiInstanceName = azureDeployment.instanceName;
-        azureConfig.azureOpenAIApiDeploymentName = azureDeployment.deploymentName;
-        azureConfig.azureOpenAIApiVersion = azureDeployment.apiVersion;
-      }
-    } else {
-      console.error("Azure deployment is undefined. Please check your settings.");
+    const selectedConfig = providerConfigs[customModel.provider];
+    if (!selectedConfig) {
+      throw new CustomError(`Provider ${customModel.provider} is not recognized`);
     }
 
-    const selectedProviderConfig =
-      providerConfig[customModel.provider as EmbeddingModelProviders] || {};
+    this.validateModelConfig(customModel, settings);
+    return selectedConfig as ProviderConfig;
+  }
 
-    return { ...baseConfig, ...selectedProviderConfig };
+  private validateProvider(provider: string): provider is EmbeddingModelProviders {
+    return Object.values(EmbeddingModelProviders).includes(provider as EmbeddingModelProviders);
+  }
+
+  private validateAzureConfig(deployment?: AzureDeployment): void {
+    if (!deployment) {
+      return;
+    }
+
+    const requiredFields: Array<keyof AzureDeployment> = [
+      "instanceName",
+      "deploymentName",
+      "apiVersion",
+    ];
+
+    const missingFields = requiredFields.filter((field) => !deployment[field]);
+    if (missingFields.length > 0) {
+      throw new CustomError(
+        `Missing required Azure configuration fields: ${missingFields.join(", ")}`
+      );
+    }
+  }
+
+  private validateModelConfig(customModel: EmbeddingCustomModel, settings: Settings): void {
+    if (customModel.provider === EmbeddingModelProviders.OPENAI_FORMAT) {
+      if (!customModel.baseUrl) {
+        throw new Error("Base URL is required for OpenAI Format models.");
+      }
+    }
+    if (customModel.provider === EmbeddingModelProviders.AZURE_OPENAI) {
+      if (
+        !settings.azureOpenAIApiInstanceName ||
+        !settings.azureOpenAIApiDeploymentName ||
+        !settings.azureOpenAIApiVersion
+      ) {
+        throw new Error(
+          "Azure instance name, deployment name, and API version are required for Azure models."
+        );
+      }
+    }
+    // Add other validations here
   }
 
   async ping(model: EmbeddingCustomModel): Promise<boolean> {
     const tryPing = async (enableCors: boolean) => {
       const modelToTest = { ...model, enableCors };
-      const modelKey = getModelKey(modelToTest); // Use a valid model key
-      const config = this.getModelConfig(modelKey, modelToTest);
+      const config = this.getModelConfig(modelToTest);
       const testModel = new (this.getProviderConstructor(modelToTest))(config);
       await testModel.embedQuery("test");
     };

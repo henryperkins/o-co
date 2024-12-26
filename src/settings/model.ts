@@ -11,7 +11,7 @@ import {
 } from "@/constants";
 
 import { updateModelConfig } from "@/aiParams";
-import { EmbeddingModelProviders } from "@/types";
+import { EmbeddingModelProviders } from "@/constants";
 
 export { DEFAULT_SETTINGS };
 

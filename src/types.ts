@@ -7,7 +7,7 @@ import { BaseLanguageModel } from "@langchain/core/language_models/base";
 import { BaseRetriever } from "@langchain/core/retrievers";
 import { TFile } from "obsidian";
 import { BaseChatMemory } from "langchain/memory";
-import { ChatModelProviders, EmbeddingModelProviders } from "./constants";
+import { ChatModelProviders, EmbeddingModelProviders } from "@/constants";
 
 export interface ModelConfig {
   modelName: string;
@@ -19,7 +19,6 @@ export interface ModelConfig {
   presencePenalty?: number;
   frequencyPenalty?: number;
   topP?: number;
-  maxCompletionTokens?: number;
   openAIApiKey?: string;
   openAIOrgId?: string;
   anthropicApiKey?: string;

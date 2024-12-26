@@ -215,7 +215,7 @@ export default class ChatModelManager {
         modelName: customModel.name,
         openAIApiKey: getDecryptedKey(customModel.apiKey || settings.openAIApiKey),
         configuration: {
-          baseURL: customModel
+          baseURL: customModel.baseUrl,
           fetch: customModel.enableCors ? safeFetch : undefined,
           dangerouslyAllowBrowser: true,
         },
