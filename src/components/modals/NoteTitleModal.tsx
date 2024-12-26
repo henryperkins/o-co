@@ -1,7 +1,7 @@
 import { App } from "obsidian";
 import { BaseNoteModal } from "./BaseNoteModal";
 
-export class NoteTitleModal extends BaseNoteModal<string> {
+export class NoteTitleModal extends BaseNoteModal<TFile> {
   private onChooseNoteTitle: (noteTitle: string) => void;
 
   constructor(app: App, noteTitles: string[], onChooseNoteTitle: (noteTitle: string) => void) {

@@ -111,7 +111,11 @@ export class DBOperations {
 
       try {
         if (await this.chunkedStorage.exists()) {
-          this.oramaDb = await this.chunkedStorage.loadDatabase();
+          const loadedDb = await this.chunkedStorage.loadDatabase();
+          if (!loadedDb.insert || !loadedDb.search) {
+            throw new Error("Orama database is not properly initialized.");
+          }
+          this.oramaDb = loadedDb;
           console.log("Loaded existing chunked Orama database from disk.");
           this.isIndexLoaded = true;
           return this.oramaDb;
@@ -281,7 +285,7 @@ export class DBOperations {
 
     this.lastEmbeddingModel = getSettings().embeddingModelKey;
 
-    const schema = this.createDynamicSchema(vectorLength);
+    const schema: AnySchema = this.createDynamicSchema(vectorLength);
 
     const db = await create({
       schema,
