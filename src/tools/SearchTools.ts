@@ -1,3 +1,4 @@
+import { App } from "obsidian";
 import { EMPTY_INDEX_ERROR_MESSAGE, TEXT_WEIGHT } from "@/constants";
 import { CustomError } from "@/error";
 import { BrevilabsClient } from "@/LLMProviders/brevilabsClient";

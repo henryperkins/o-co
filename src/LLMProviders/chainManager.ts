@@ -26,7 +26,7 @@ import {
 } from "@langchain/core/prompts";
 import { RunnableSequence } from "@langchain/core/runnables";
 import { App, Notice } from "obsidian";
-import { FormattedDateTime } from "@/sharedState";
+import { FormattedDateTime } from "@/utils";
 import { BrevilabsClient } from "./brevilabsClient";
 import ChatModelManager from "./chatModelManager";
 import EmbeddingsManager from "./embeddingManager";
@@ -452,7 +452,7 @@ export default class ChainManager {
         sender: "system",
         message: `Error: ${error.message}`,
         isVisible: true,
-        timestamp: new Date().toISOString(),
+        timestamp: { isoString: new Date().toISOString() } as FormattedDateTime,
       });
       return;
     }
