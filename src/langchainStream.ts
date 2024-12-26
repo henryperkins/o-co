@@ -2,6 +2,7 @@ import { AI_SENDER } from "@/constants";
 import ChainManager from "@/LLMProviders/chainManager";
 import { ChatMessage } from "@/sharedState";
 import { formatDateTime } from "./utils";
+import { CustomError } from "@/error";
 
 export type Role = "assistant" | "user" | "system";
 
@@ -32,7 +33,12 @@ export const getAIResponse = async (
     console.error("Model request failed:", error);
     let errorMessage = "Model request failed: ";
 
-    if (error instanceof Error) {
+    if (error instanceof CustomError) {
+      errorMessage += error.message;
+      if (error.code) {
+        errorMessage += ` (Code: ${error.code})`;
+      }
+    } else if (error instanceof Error) {
       errorMessage += error.message;
       if (error.cause) {
         errorMessage += ` Cause: ${error.cause}`;
