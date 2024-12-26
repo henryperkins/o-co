@@ -5,27 +5,20 @@ import {
   setChainType,
   subscribeToChainTypeChange,
   subscribeToModelKeyChange,
-} from "../aiParams";
-import ChainFactory, { ChainType, Document } from "../chainFactory";
-import {
-  AI_SENDER,
-  BUILTIN_CHAT_MODELS,
-  ChatModelProviders,
-  USER_SENDER,
-  VAULT_VECTOR_STORE_STRATEGY,
-} from "../constants";
+} from "@/aiParams";
+import ChainFactory, { ChainType, Document } from "@/chainFactory";
+import { BUILTIN_CHAT_MODELS, USER_SENDER, VAULT_VECTOR_STORE_STRATEGY } from "@/constants";
 import {
   ChainRunner,
   CopilotPlusChainRunner,
   LLMChainRunner,
   VaultQAChainRunner,
-} from "./chainRunner";
-import { HybridRetriever } from "../search/hybridRetriever";
-import VectorStoreManager from "../search/vectorStoreManager";
-import { getSettings, getSystemPrompt, subscribeToSettingsChange } from "../settings/model";
-import { ChatMessage } from "../sharedState";
-import { findCustomModel, isSupportedChain } from "../utils";
-import { isChatCustomModel } from "../types";
+} from "@/LLMProviders/chainRunner";
+import { HybridRetriever } from "@/search/hybridRetriever";
+import VectorStoreManager from "@/search/vectorStoreManager";
+import { getSettings, getSystemPrompt, subscribeToSettingsChange } from "@/settings/model";
+import { ChatMessage } from "@/sharedState";
+import { findCustomModel, isSupportedChain } from "@/utils";
 import {
   ChatPromptTemplate,
   HumanMessagePromptTemplate,
@@ -38,13 +31,35 @@ import ChatModelManager from "./chatModelManager";
 import EmbeddingsManager from "./embeddingManager";
 import MemoryManager from "./memoryManager";
 import PromptManager from "./promptManager";
-import { ChatOpenAI } from "@langchain/openai";
 import { Embeddings } from "@langchain/core/embeddings";
+import { Orama } from "orama";
+import { BaseChatModel } from "@langchain/core/language_models/chat_models";
+import { Callbacks } from "@langchain/core/callbacks/manager";
+import { CustomChatModelCallOptions } from "@/types";
+interface ModelValidation {
+  isValid: boolean;
+  error?: string;
+}
+
+interface ChainManagerOptions extends SetChainOptions {
+  debug?: boolean;
+  callbacks?: Callbacks;
+}
+
+export const isChainManagerOptions = (obj: unknown): obj is ChainManagerOptions => {
+  const options = obj as ChainManagerOptions;
+  return (
+    typeof obj === "object" &&
+    obj !== null &&
+    (options.debug === undefined || typeof options.debug === "boolean") &&
+    (options.callbacks === undefined || typeof options.callbacks === "object")
+  );
+};
 
 export default class ChainManager {
-  private static chain: RunnableSequence;
-  private static retrievalChain: RunnableSequence;
-  private currentModelKey: string | undefined;
+  private static chain: RunnableSequence | undefined;
+  private static retrievalChain: RunnableSequence | undefined;
+  private readonly debug: boolean;
 
   public app: App;
   public vectorStoreManager: VectorStoreManager;
@@ -54,6 +69,8 @@ export default class ChainManager {
   public promptManager: PromptManager;
   public brevilabsClient: BrevilabsClient;
   public static retrievedDocuments: Document[] = [];
+  private options: ChainManagerOptions | undefined;
+  private callbacks: Callbacks | undefined;
 
   constructor(app: App, vectorStoreManager: VectorStoreManager, brevilabsClient: BrevilabsClient) {
     // Instantiate singletons
@@ -64,11 +81,11 @@ export default class ChainManager {
     this.embeddingsManager = EmbeddingsManager.getInstance();
     this.promptManager = PromptManager.getInstance();
     this.brevilabsClient = brevilabsClient;
-    this.currentModelKey = getModelKey();
+    this.debug = getSettings().debug;
     this.createChainWithNewModel();
     subscribeToModelKeyChange(() => this.createChainWithNewModel());
     subscribeToChainTypeChange(() =>
-      this.setChain(getChainType(), {
+      this.createChainWithOptions({
         refreshIndex:
           getSettings().indexVaultToVectorStore === VAULT_VECTOR_STORE_STRATEGY.ON_MODE_SWITCH &&
           (getChainType() === ChainType.VAULT_QA_CHAIN ||
@@ -78,23 +95,33 @@ export default class ChainManager {
     subscribeToSettingsChange(() => this.createChainWithNewModel());
   }
 
-  static getChain(): RunnableSequence {
+  static getChain(): RunnableSequence | undefined {
     return ChainManager.chain;
   }
 
-  static getRetrievalChain(): RunnableSequence {
+  static getRetrievalChain(): RunnableSequence | undefined {
     return ChainManager.retrievalChain;
   }
 
   private validateChainType(chainType: ChainType): void {
-    if (chainType === undefined || chainType === null) throw new Error("No chain type set");
+    if (!chainType) {
+      throw new Error("No chain type set");
+    }
   }
 
+  private validateChatModel() {
+    if (!this.chatModelManager.validateChatModel(this.chatModelManager.getChatModel())) {
+      const errorMsg =
+        "Chat model is not initialized properly, check your API key in Copilot setting and make sure you have API access.";
+      new Notice(errorMsg);
+      throw new Error(errorMsg);
+    }
+  }
 
   private validateChainInitialization() {
     if (!ChainManager.chain || !isSupportedChain(ChainManager.chain)) {
       console.error("Chain is not initialized properly, re-initializing chain: ", getChainType());
-      this.setChain(getChainType());
+      this.createChainWithOptions();
     }
   }
 
@@ -103,9 +130,10 @@ export default class ChainManager {
   }
 
   /**
-   * Create chain with a new model, including Azure-specific handling.
+   * Update the active model and create a new chain with the specified model
+   * name.
    */
-  public async createChainWithNewModel(modelKey: string = getModelKey()): Promise<void> {
+  createChainWithNewModel(): void {
     let newModelKey = getModelKey();
     try {
       let customModel = findCustomModel(newModelKey, getSettings().activeModels);
@@ -115,180 +143,217 @@ export default class ChainManager {
         customModel = BUILTIN_CHAT_MODELS[0];
         newModelKey = customModel.name + "|" + customModel.provider;
       }
-
-      if (customModel.provider === ChatModelProviders.AZURE_OPENAI) {
-        const settings = getSettings();
-        let deploymentName = "";
-        if (newModelKey.startsWith("o1-preview")) {
-          deploymentName = newModelKey.split("|")[1] || "";
-        }
-
-        const deployment = settings.azureOpenAIApiDeployments?.find(
-          (d) => d.deploymentName === deploymentName
-        );
-
-        if (deployment) {
-          customModel = {
-            ...customModel,
-            provider: ChatModelProviders.AZURE_OPENAI,
-          };
-        }
-      }
-
-      if (!isChatCustomModel(customModel)) {
-        throw new Error(`Model ${newModelKey} is not a valid chat model`);
-      }
       this.chatModelManager.setChatModel(customModel);
       // Must update the chatModel for chain because ChainFactory always
       // retrieves the old chain without the chatModel change if it exists!
       // Create a new chain with the new chatModel
-      this.setChain(getChainType());
+      this.createChainWithOptions();
       console.log(`Setting model to ${newModelKey}`);
     } catch (error) {
       console.error("createChainWithNewModel failed: ", error);
       console.log("modelKey:", newModelKey);
     }
+  }
 
-    // Check if provider is Azure OpenAI and apply the proper settings
-    if (modelKey.startsWith("o1-preview") || modelKey.includes("azure_openai")) {
-      // Pull Azure info from settings or model config
-      // ...your Azure-specific logic...
-      console.log("Azure OpenAI configuration applied.");
-      // ...existing code to handle azureApiKey, instanceName, version...
+  private validateModelOptions(options: CustomChatModelCallOptions): ModelValidation {
+    try {
+      if (options.timeout && (options.timeout < 1 || options.timeout > 120000)) {
+        return { isValid: false, error: "Timeout must be between 1 and 120000" };
+      }
+      return { isValid: true };
+    } catch (error) {
+      return { isValid: false, error: `Model options validation failed: ${error.message}` };
     }
   }
 
-  /**
-   * Sets the chain, ensuring Azure-specific configurations are initialized if needed.
-   */
-  public async setChain(
-    chainType: ChainType,
-    options?: { refreshIndex: boolean; prompt?: ChatPromptTemplate; abortController?: AbortController }
-  ): Promise<void> {
-    if (!this.chatModelManager.validateChatModel(this.chatModelManager.getChatModel())) {
-      console.error("setChain failed: No chat model set.");
-      return;
+  private handleChainError(error: Error, context: string): never {
+    const errorMessage = `Chain error in ${context}: ${error.message}`;
+    console.error(errorMessage);
+    new Notice(errorMessage);
+    throw new Error(errorMessage);
+  }
+
+  private cleanup(): void {
+    try {
+      if (this.options?.abortController) {
+        this.options.abortController.abort();
+      }
+      ChainManager.chain = undefined;
+      ChainManager.retrievalChain = undefined;
+      this.callbacks = undefined;
+    } catch (error) {
+      console.error("Cleanup failed:", error);
     }
+  }
 
-    this.validateChainType(chainType);
+  private getModelConfig() {
+    const modelKey = getModelKey();
+    const settings = getSettings();
+    return settings.modelConfigs[modelKey] || {};
+  }
 
-    // Get chatModel, memory, prompt, and embeddingAPI from respective managers
-    const chatModel = this.chatModelManager.getChatModel();
-    const memory = this.memoryManager.getMemory();
-    const chatPrompt = this.promptManager.getChatPrompt();
+  private getCallbacks(): Callbacks | undefined {
+    return undefined;
+  }
 
-    // Check if the model is an Azure OpenAI model
-    if (
-      chatModel instanceof ChatOpenAI &&
-      (chatModel as any).provider === ChatModelProviders.AZURE_OPENAI
-    ) {
-      const modelKey = getModelKey();
-      let deploymentName = "";
-      if (modelKey.startsWith("o1-preview")) {
-        deploymentName = modelKey.split("|")[1] || "";
-      }
+  private async createChainWithOptions(options: ChainManagerOptions = {}): Promise<void> {
+    try {
+      this.options = options;
+      this.callbacks = this.getCallbacks();
 
-      const deployment = getSettings().azureOpenAIApiDeployments?.find(
-        (d) => d.deploymentName === deploymentName
-      );
+      await this.trackPerformance(async () => {
+        await this.setChain(getChainType(), {
+          ...options,
+          callbacks: this.callbacks,
+        });
+      }, "createChainWithOptions");
+    } catch (error) {
+      console.error("[ChainManager] Failed to create chain:", error);
+      throw error;
+    }
+  }
 
-      if (deployment) {
-        // Update the chatModel with the correct deployment settings
-        chatModel.azureOpenAIApiDeploymentName = deployment.deploymentName;
-        chatModel.azureOpenAIApiInstanceName = deployment.instanceName;
-        chatModel.azureOpenAIApiKey = deployment.apiKey;
-        chatModel.azureOpenAIApiVersion = deployment.apiVersion;
+  private async trackPerformance<T>(
+    operation: () => Promise<T>,
+    operationName: string
+  ): Promise<T> {
+    const start = performance.now();
+    try {
+      return await operation();
+    } finally {
+      const duration = performance.now() - start;
+      if (this.debug) {
+        console.log(`[ChainManager] ${operationName} took ${duration}ms`);
       }
     }
+  }
 
-    switch (chainType) {
-      case ChainType.LLM_CHAIN: {
-        ChainManager.chain = ChainFactory.createNewLLMChain({
-          llm: chatModel,
-          memory: memory,
-          prompt: options?.prompt || chatPrompt,
-          abortController: options?.abortController,
-        }) as RunnableSequence;
-
-        setChainType(ChainType.LLM_CHAIN);
-        break;
+  async setChain(chainType: ChainType, options: ChainManagerOptions = {}): Promise<void> {
+    try {
+      // Validate chat model
+      if (!this.chatModelManager.validateChatModel(this.chatModelManager.getChatModel())) {
+        this.handleChainError(new Error("No chat model set"), "setChain");
       }
 
-      case ChainType.VAULT_QA_CHAIN: {
-        const { embeddingsAPI } = await this.initializeQAChain(options);
+      this.validateChainType(chainType);
 
-        const retriever = new HybridRetriever(
-          this.vectorStoreManager.dbOps,
-          this.app.vault,
-          chatModel,
-          embeddingsAPI,
-          this.brevilabsClient,
-          {
-            minSimilarityScore: 0.01,
-            maxK: getSettings().maxSourceChunks,
-            salientTerms: [],
-          },
-          getSettings().debug
-        );
+      const chatModel = this.chatModelManager.getChatModel();
+      const memory = this.memoryManager.getMemory();
+      const chatPrompt = this.promptManager.getChatPrompt();
+      const modelConfig = this.getModelConfig();
 
-        // Create new conversational retrieval chain
-        ChainManager.retrievalChain = ChainFactory.createConversationalRetrievalChain(
-          {
+      switch (chainType) {
+        case ChainType.LLM_CHAIN: {
+          ChainManager.chain = ChainFactory.createNewLLMChain({
             llm: chatModel,
-            retriever: retriever,
-            systemMessage: getSystemPrompt(),
-          },
-          ChainManager.storeRetrieverDocuments.bind(ChainManager),
-          getSettings().debug
-        );
+            memory: memory,
+            prompt: options.prompt || chatPrompt,
+            abortController: options.abortController,
+            maxTokens: modelConfig.maxCompletionTokens,
+          }) as RunnableSequence;
 
-        setChainType(ChainType.VAULT_QA_CHAIN);
-        if (getSettings().debug) {
-          console.log("New Vault QA chain with hybrid retriever created for entire vault");
-          console.log("Set chain:", ChainType.VAULT_QA_CHAIN);
+          setChainType(ChainType.LLM_CHAIN);
+          break;
         }
-        break;
+
+        case ChainType.VAULT_QA_CHAIN: {
+          const { embeddingsAPI } = await this.initializeQAChain(options);
+
+          const retriever = new HybridRetriever(
+            this.vectorStoreManager.dbOps,
+            this.app.vault,
+            chatModel,
+            embeddingsAPI,
+            this.brevilabsClient,
+            {
+              minSimilarityScore: 0.01,
+              maxK: getSettings().maxSourceChunks,
+              salientTerms: [],
+            },
+            getSettings().debug
+          );
+
+          // Create new conversational retrieval chain
+          ChainManager.retrievalChain = ChainFactory.createConversationalRetrievalChain(
+            {
+              llm: chatModel,
+              retriever: retriever,
+              systemMessage: getSystemPrompt(),
+            },
+            ChainManager.storeRetrieverDocuments.bind(ChainManager),
+            getSettings().debug
+          );
+
+          setChainType(ChainType.VAULT_QA_CHAIN);
+          if (getSettings().debug) {
+            console.log("New Vault QA chain with hybrid retriever created for entire vault");
+            console.log("Set chain:", ChainType.VAULT_QA_CHAIN);
+          }
+          break;
+        }
+
+        case ChainType.COPILOT_PLUS_CHAIN: {
+          await this.initializeQAChain(options);
+
+          const modelOptions: CustomChatModelCallOptions = {
+            timeout: 120000,
+            streaming: true,
+            callbacks: options.callbacks,
+          };
+
+          // Validate and apply model options
+          const validation = this.validateModelOptions(modelOptions);
+          if (!validation.isValid) {
+            this.handleChainError(new Error(validation.error), "model options");
+          }
+
+          const bindOptions: any = {
+            ...modelOptions,
+          };
+
+          if (options.abortController) {
+            bindOptions.signal = options.abortController.signal;
+          }
+
+          if (!modelConfig.modelName?.startsWith("o1-")) {
+            bindOptions.maxTokens = modelConfig.maxCompletionTokens;
+          }
+
+          if (modelConfig.temperature !== undefined) {
+            bindOptions.temperature = modelConfig.temperature;
+          }
+
+          if (modelConfig.reasoningEffort !== undefined) {
+            bindOptions.configuration = {
+              headers: {
+                "Helicone-Property-ReasoningEffort": modelConfig.reasoningEffort,
+              },
+            };
+          }
+
+          try {
+            const configuredLLM = chatModel.bind(bindOptions) as BaseChatModel;
+
+            ChainManager.chain = ChainFactory.createNewLLMChain({
+              llm: configuredLLM,
+              memory,
+              prompt: options.prompt || chatPrompt,
+              abortController: options.abortController,
+            });
+
+            setChainType(ChainType.COPILOT_PLUS_CHAIN);
+          } catch (error) {
+            this.handleChainError(error, "chain configuration");
+          }
+          break;
+        }
+
+        default:
+          this.handleChainError(new Error(`Unsupported chain type: ${chainType}`), "chain type");
       }
-
-      case ChainType.COPILOT_PLUS_CHAIN: {
-        // For initial load of the plugin
-        await this.initializeQAChain(options);
-        ChainManager.chain = ChainFactory.createNewLLMChain({
-          llm: chatModel,
-          memory: memory,
-          prompt: options?.prompt || chatPrompt,
-          abortController: options?.abortController,
-        }) as RunnableSequence;
-
-        setChainType(ChainType.COPILOT_PLUS_CHAIN);
-        break;
-      }
-
-      default:
-        this.validateChainType(chainType);
-        break;
+    } catch (error) {
+      this.handleChainError(error, "setChain");
     }
-
-    // If Azure OpenAI is detected, configure chain with Azure-specific settings
-    if (this.currentModelKey?.includes("azure_openai") || this.currentModelKey?.startsWith("o1-preview")) {
-      // ...your logic to set Azure keys, instance name, API version...
-      console.log("Chain set with Azure OpenAI provider.");
-    }
-  }
-
-  /**
-   * Returns an effective prompt, with optional Azure handling.
-   */
-  private getEffectivePrompt(userPrompt: string): string {
-    // ...existing code...
-
-    // If Azure model requires special prompt handling, do so here
-    if (this.currentModelKey?.includes("azure_openai")) {
-      // ...your Azure-specific prompt logic...
-    }
-
-    // ...existing code...
-    return userPrompt;
   }
 
   private getChainRunner(): ChainRunner {
@@ -305,79 +370,31 @@ export default class ChainManager {
     }
   }
 
-  /**
-   * Validates the chat model, including Azure-specific checks.
-   */
-  private validateChatModel(): boolean {
-    // ...existing validation code...
-
-    // Additional Azure validations
-    if (this.currentModelKey?.includes("azure_openai")) {
-      // ...verify that azure keys, instance name, and version are available...
+  private async initializeQAChain(
+    options: SetChainOptions
+  ): Promise<{ embeddingsAPI: Embeddings; db: Orama<any> }> {
+    let embeddingsAPI: Embeddings;
+    try {
+      embeddingsAPI = this.embeddingsManager.getEmbeddingsAPI();
+    } catch (error) {
+      console.error("Failed to get embeddings API:", error);
+      new Notice("Failed to get embeddings API. Please check your embedding settings.");
+      throw new Error("Failed to get embeddings API. Please check your embedding settings.");
     }
 
-    // ...existing code...
-    return true;
-  }
-
-  /**
-   * Initializes QA chain, applying Azure-specific settings if necessary.
-   */
-  public async initializeQAChain(options?: { refreshIndex: boolean }): Promise<{ embeddingsAPI: any; db: any }> {
-    const embeddingsAPI = this.embeddingsManager.getEmbeddingsAPI();
     if (!embeddingsAPI) {
-      throw new Error("Error getting embeddings API. Please check your settings.");
+      new Notice("Embeddings API is not available. Please check your settings.");
+      throw new Error("Embeddings API is not available. Please check your settings.");
     }
 
-    const modelKey = getModelKey();
-    if (modelKey.startsWith("o1-preview")) {
-      const settings = getSettings();
-      const deploymentName = modelKey.split("|")[1] || "";
-      const deployment = settings.azureOpenAIApiDeployments?.find(
-        (d) => d.deploymentName === deploymentName
-      );
-
-      if (deployment) {
-        const embeddingsModel = {
-          ...embeddingsAPI,
-          modelName: deployment.deploymentName,
-          provider: ChatModelProviders.AZURE_OPENAI,
-          azureOpenAIApiKey: deployment.apiKey,
-          azureOpenAIApiInstanceName: deployment.instanceName,
-          azureOpenAIApiDeploymentName: deployment.deploymentName,
-          azureOpenAIApiVersion: deployment.apiVersion,
-        } as unknown as Embeddings;
-
-        const db = await this.vectorStoreManager.getOrInitializeDb(embeddingsModel);
-
-        // Handle index refresh if needed
-        if (options?.refreshIndex) {
-          await this.vectorStoreManager.indexVaultToVectorStore();
-        }
-
-        return { embeddingsAPI: embeddingsModel, db };
-      } else {
-        throw new Error("Deployment not found for o1-preview model.");
-      }
-    }
-
-    const embeddingsAPI = this.embeddingsManager.getEmbeddingsAPI();
-    if (!embeddingsAPI) {
-      throw new Error("Error getting embeddings API. Please check your settings.");
-    }
     const db = await this.vectorStoreManager.getOrInitializeDb(embeddingsAPI);
 
     // Handle index refresh if needed
-    if (options?.refreshIndex) {
+    if (options.refreshIndex) {
       await this.vectorStoreManager.indexVaultToVectorStore();
     }
 
-    if (this.currentModelKey?.includes("azure_openai") || this.currentModelKey?.startsWith("o1-preview")) {
-      // ...hooks for Azure QA context...
-      console.log("Initialized QA chain with Azure-specific configuration.");
-    }
-
-    return { embeddingsAPI, db };
+    return { embeddingsAPI, db }; // Return the object
   }
 
   async runChain(
@@ -400,26 +417,16 @@ export default class ChainManager {
 
     const chatModel = this.chatModelManager.getChatModel();
     const modelName = (chatModel as any).modelName || (chatModel as any).model || "";
-    const isO1Model = modelName.startsWith("o1");
+    const isO1PreviewModel = modelName === "o1-preview";
 
     // Handle ignoreSystemMessage
-    if (ignoreSystemMessage || isO1Model) {
-      let effectivePrompt = ChatPromptTemplate.fromMessages([
+    if (ignoreSystemMessage || isO1PreviewModel) {
+      const effectivePrompt = ChatPromptTemplate.fromMessages([
         new MessagesPlaceholder("history"),
         HumanMessagePromptTemplate.fromTemplate("{input}"),
       ]);
 
-      // TODO: hack for o1 models, to be removed when they support system prompt
-      if (isO1Model) {
-        //  Temporary fix：for o1-xx model need to covert systemMessage to aiMessage
-        effectivePrompt = ChatPromptTemplate.fromMessages([
-          [AI_SENDER, getSystemPrompt() || ""],
-          effectivePrompt,
-        ]);
-      }
-
-      this.setChain(getChainType(), {
-        refreshIndex: false,
+      this.createChainWithOptions({
         prompt: effectivePrompt,
       });
     }
@@ -444,6 +451,15 @@ export default class ChainManager {
           .getMemory()
           .saveContext({ input: userMsg.message }, { output: aiMsg.message });
       }
+    }
+  }
+
+  public async destroy(): Promise<void> {
+    try {
+      this.cleanup();
+      await this.memoryManager.clearChatMemory();
+    } catch (error) {
+      console.error("Destroy failed:", error);
     }
   }
 }

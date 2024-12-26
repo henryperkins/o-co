@@ -1,4 +1,6 @@
-import { CustomModel, ChatCustomModel, EmbeddingCustomModel } from "@/types";
+// src/settings/model.ts
+
+import { CustomModel, ChatCustomModel, EmbeddingCustomModel, AzureOpenAIDeployment } from "@/types";
 import { atom, createStore, useAtomValue } from "jotai";
 
 import { type ChainType } from "@/chainFactory";
@@ -10,12 +12,10 @@ import {
   DEFAULT_SYSTEM_PROMPT,
 } from "@/constants";
 
-import { AzureOpenAIDeployment } from "@/aiParams";
+import { updateModelConfig } from "@/aiParams";
 import { EmbeddingModelProviders } from "@/types";
 
 export { DEFAULT_SETTINGS };
-
-export type { AzureOpenAIDeployment };
 
 export interface ModelConfig {
   modelName: string;
@@ -232,3 +232,57 @@ function mergeActiveModels(
 
   return Array.from(modelMap.values());
 }
+
+// Add new helper functions
+export const addAzureDeployment = async (deployment: AzureOpenAIDeployment): Promise<void> => {
+  const settings = getSettings();
+  if (!validateDeployment(deployment)) {
+    throw new Error("Invalid deployment configuration");
+  }
+
+  const deployments = settings.azureOpenAIApiDeployments || [];
+  const updatedDeployments = [...deployments, deployment];
+  await updateSetting("azureOpenAIApiDeployments", updatedDeployments);
+  await updateDeploymentConfig(deployment);
+};
+
+export const updateAzureDeployment = async (
+  index: number,
+  deployment: AzureOpenAIDeployment
+): Promise<void> => {
+  const settings = getSettings();
+  const deployments = [...(settings.azureOpenAIApiDeployments || [])];
+
+  if (index >= 0 && index < deployments.length) {
+    deployments[index] = deployment;
+    await updateSetting("azureOpenAIApiDeployments", deployments);
+    await updateDeploymentConfig(deployment);
+  }
+};
+
+export const removeAzureDeployment = async (index: number): Promise<void> => {
+  const settings = getSettings();
+  const deployments = settings.azureOpenAIApiDeployments || [];
+  const updatedDeployments = deployments.filter((_, i) => i !== index);
+  await updateSetting("azureOpenAIApiDeployments", updatedDeployments);
+};
+
+export const validateDeployment = (deployment: AzureOpenAIDeployment): boolean => {
+  return Boolean(
+    deployment.deploymentName?.trim() &&
+      deployment.instanceName?.trim() &&
+      deployment.apiKey?.trim() &&
+      deployment.apiVersion?.trim()
+  );
+};
+
+export const updateDeploymentConfig = async (deployment: AzureOpenAIDeployment): Promise<void> => {
+  const modelKey = `o1-preview|${deployment.deploymentName}`;
+
+  await updateModelConfig(modelKey, {
+    azureOpenAIApiKey: deployment.apiKey,
+    azureOpenAIApiInstanceName: deployment.instanceName,
+    azureOpenAIApiDeploymentName: deployment.deploymentName,
+    azureOpenAIApiVersion: deployment.apiVersion,
+  });
+};

@@ -1,10 +1,3 @@
-export interface AzureOpenAIDeployment {
-  deploymentName: string;
-  apiKey: string;
-  instanceName: string;
-  apiVersion: string;
-}
-
 import { ChainType } from "@/chainFactory";
 import { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
@@ -13,6 +6,7 @@ import { atom, useAtom } from "jotai";
 import { settingsAtom, settingsStore, getSettings, setSettings } from "@/settings/model";
 import { ChatModelProviders } from "./constants";
 import { merge } from "lodash";
+import { ModelConfig } from "@/types";
 
 const userModelKeyAtom = atom<string | null>(null);
 const modelKeyAtom = atom(
@@ -54,30 +48,6 @@ const chainTypeAtom = atom(
   }
 );
 
-export interface ModelConfig {
-  modelName: string;
-  temperature: number;
-  streaming: boolean;
-  maxRetries: number;
-  maxConcurrency: number;
-  maxTokens?: number;
-  openAIApiKey?: string;
-  openAIOrgId?: string;
-  anthropicApiKey?: string;
-  cohereApiKey?: string;
-  azureOpenAIApiKey?: string;
-  azureOpenAIApiInstanceName?: string;
-  azureOpenAIApiDeploymentName?: string;
-  azureOpenAIApiVersion?: string;
-  // Google and TogetherAI API key share this property
-  apiKey?: string;
-  openAIProxyBaseUrl?: string;
-  groqApiKey?: string;
-  enableCors?: boolean;
-  maxCompletionTokens?: number;
-  reasoningEffort?: number;
-}
-
 export interface SetChainOptions {
   prompt?: ChatPromptTemplate;
   chatModel?: BaseChatModel;
@@ -96,6 +66,14 @@ export interface CustomModel {
   isBuiltIn?: boolean;
   enableCors?: boolean;
   core?: boolean;
+}
+
+export interface AzureDeployment {
+  deploymentName: string;
+  instanceName: string;
+  apiKey: string;
+  apiVersion: string;
+  isEnabled: boolean;
 }
 
 export function setModelKey(modelKey: string) {
@@ -138,32 +116,27 @@ export function updateModelConfig(modelKey: string, newConfig: Partial<ModelConf
   const settings = getSettings();
   const modelConfigs = { ...settings.modelConfigs };
 
-  // Handle Azure models config update
   if (modelKey.startsWith("o1-preview")) {
     const deploymentName = modelKey.split("|")[1] || "";
-
-    const deploymentIndex = settings.azureOpenAIApiDeployments?.findIndex(
-      (d) => d.deploymentName === deploymentName
+    const deployment = settings.azureOpenAIApiDeployments?.find(
+      (d) => d.deploymentName === deploymentName && d.isEnabled
     );
 
-    if (deploymentIndex !== undefined && deploymentIndex !== -1) {
-      const deployment = settings.azureOpenAIApiDeployments?.[deploymentIndex];
-      if (deployment) {
-        newConfig = merge({}, newConfig, {
-          apiKey: deployment.apiKey,
-          azureOpenAIApiInstanceName: deployment.instanceName,
-          azureOpenAIApiVersion: deployment.apiVersion,
-        });
-      }
+    if (deployment) {
+      newConfig = merge({}, newConfig, {
+        azureOpenAIApiKey: deployment.apiKey,
+        azureOpenAIApiInstanceName: deployment.instanceName,
+        azureOpenAIApiDeploymentName: deployment.deploymentName,
+        azureOpenAIApiVersion: deployment.apiVersion,
+      });
     }
   }
 
   modelConfigs[modelKey] = merge({}, modelConfigs[modelKey], newConfig);
-
   setSettings({ ...settings, modelConfigs });
 }
 
-export function validateAzureDeployment(deployment: AzureOpenAIDeployment): boolean {
+export function validateAzureDeployment(deployment: AzureDeployment): boolean {
   return (
     deployment.deploymentName.trim() !== "" &&
     deployment.instanceName.trim() !== "" &&

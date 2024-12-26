@@ -9,7 +9,7 @@ import {
   formatDateTime,
 } from "@/utils";
 import { Notice } from "obsidian";
-import ChainManager from "./chainManager";
+import ChainManager from "@/LLMProviders/chainManager";
 import { COPILOT_TOOL_NAMES, IntentAnalyzer } from "./intentAnalyzer";
 
 export interface ChainRunner {
@@ -129,6 +129,9 @@ class LLMChainRunner extends BaseChainRunner {
 
     try {
       const chain = ChainManager.getChain();
+      if (!chain) {
+        throw new Error("Chain is not initialized");
+      }
       const chatStream = await chain.stream({
         input: userMessage.message,
       } as any);
@@ -185,7 +188,12 @@ class VaultQAChainRunner extends BaseChainRunner {
       const memory = this.chainManager.memoryManager.getMemory();
       const memoryVariables = await memory.loadMemoryVariables({});
       const chatHistory = extractChatHistory(memoryVariables);
-      const qaStream = await ChainManager.getRetrievalChain().stream({
+      const retrievalChain = ChainManager.getRetrievalChain();
+      if (!retrievalChain) {
+        throw new Error("Retrieval chain is not initialized");
+      }
+
+      const qaStream = await retrievalChain.stream({
         question: userMessage.message,
         chat_history: chatHistory,
       } as any);

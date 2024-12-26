@@ -1,4 +1,4 @@
-import { CustomModel, getModelKey, ModelConfig, setModelKey } from "../aiParams";
+import { CustomModel, getModelKey, setModelKey } from "@/aiParams";
 import { BUILTIN_CHAT_MODELS, ChatModelProviders } from "../constants";
 import { getDecryptedKey } from "../encryptionService";
 import { getSettings, subscribeToSettingsChange } from "../settings/model";
@@ -12,7 +12,7 @@ import { ChatGroq } from "@langchain/groq";
 import { ChatOllama } from "@langchain/ollama";
 import { ChatOpenAI } from "@langchain/openai";
 import { Notice } from "obsidian";
-
+import { ModelConfig } from "@/types"; // Import directly from types
 type ChatConstructorType = new (config: any) => BaseChatModel;
 
 const CHAT_PROVIDER_CONSTRUCTORS: Record<ChatModelProviders, ChatConstructorType> = {
@@ -73,16 +73,13 @@ export default class ChatModelManager {
   private getModelConfig(customModel: CustomModel): ModelConfig {
     const settings = getSettings();
     const modelKey = getModelKey();
-
     const modelConfig = settings.modelConfigs[modelKey] || {};
+    const isO1Model = customModel.name.startsWith("o1");
 
-    // Check if the model starts with "o1"
-    const modelName = customModel.name;
-    const isO1Model = modelName.startsWith("o1");
-
+    // Base config
     const baseConfig: ModelConfig = {
-      modelName: modelName,
-      temperature: modelConfig.temperature ?? 0.7, // Default to 0.7 if undefined
+      modelName: customModel.name,
+      temperature: modelConfig.temperature ?? 0.7,
       streaming: true,
       maxRetries: 3,
       maxConcurrency: 3,
@@ -115,7 +112,7 @@ export default class ChatModelManager {
     // Fix the type definition - use Record instead of complex mapped type
     const providerConfig = {
       [ChatModelProviders.OPENAI]: {
-        modelName: modelName,
+        modelName: customModel.name,
         openAIApiKey: getDecryptedKey(customModel.apiKey || settings.openAIApiKey),
         configuration: {
           baseURL: customModel.baseUrl,
@@ -132,7 +129,7 @@ export default class ChatModelManager {
       },
       [ChatModelProviders.ANTHROPIC]: {
         anthropicApiKey: getDecryptedKey(customModel.apiKey || settings.anthropicApiKey),
-        modelName: modelName,
+        modelName: customModel.name,
         anthropicApiUrl: customModel.baseUrl,
         clientOptions: {
           // Required to bypass CORS restrictions
@@ -161,11 +158,11 @@ export default class ChatModelManager {
       },
       [ChatModelProviders.COHEREAI]: {
         apiKey: getDecryptedKey(customModel.apiKey || settings.cohereApiKey),
-        model: modelName,
+        model: customModel.name,
       },
       [ChatModelProviders.GOOGLE]: {
         apiKey: getDecryptedKey(customModel.apiKey || settings.googleApiKey),
-        modelName: modelName,
+        modelName: customModel.name,
         safetySettings: [
           {
             category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
@@ -187,7 +184,7 @@ export default class ChatModelManager {
         baseUrl: customModel.baseUrl,
       },
       [ChatModelProviders.OPENROUTERAI]: {
-        modelName: modelName,
+        modelName: customModel.name,
         openAIApiKey: getDecryptedKey(customModel.apiKey || settings.openRouterAiApiKey),
         configuration: {
           baseURL: customModel.baseUrl || "https://openrouter.ai/api/v1",
@@ -196,18 +193,18 @@ export default class ChatModelManager {
       },
       [ChatModelProviders.GROQ]: {
         apiKey: getDecryptedKey(customModel.apiKey || settings.groqApiKey),
-        modelName: modelName,
+        modelName: customModel.name,
       },
       [ChatModelProviders.OLLAMA]: {
         // ChatOllama has `model` instead of `modelName`!!
-        model: modelName,
+        model: customModel.name,
         // @ts-ignore
         apiKey: customModel.apiKey || "default-key",
         // MUST NOT use /v1 in the baseUrl for ollama
         baseUrl: customModel.baseUrl || "http://localhost:11434",
       },
       [ChatModelProviders.LM_STUDIO]: {
-        modelName: modelName,
+        modelName: customModel.name,
         openAIApiKey: customModel.apiKey || "default-key",
         configuration: {
           baseURL: customModel.baseUrl || "http://localhost:1234/v1",
@@ -215,7 +212,7 @@ export default class ChatModelManager {
         },
       },
       [ChatModelProviders.OPENAI_FORMAT]: {
-        modelName: modelName,
+        modelName: customModel.name,
         openAIApiKey: getDecryptedKey(customModel.apiKey || settings.openAIApiKey),
         configuration: {
           baseURL: customModel.baseUrl,
@@ -253,14 +250,14 @@ export default class ChatModelManager {
     return isO1Model
       ? {
           maxCompletionTokens: maxCompletionTokens,
-          temperature: 1,
+          temperature: 1, // Fixed temperature for o1 models
           extraParams: {
             reasoning_effort: reasoningEffort,
           },
         }
       : {
           maxTokens: maxTokens,
-          temperature: temperature,
+          temperature: temperature ?? 0.7,
         };
   }
 

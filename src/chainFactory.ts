@@ -11,6 +11,12 @@ export interface LLMChainInput {
   memory: BaseChatMemory;
   prompt: ChatPromptTemplate;
   abortController?: AbortController;
+  maxTokens?: number;
+  maxCompletionTokens?: number;
+  reasoningEffort?: number;
+  callbackManager?: {
+    handleAbort?: () => void;
+  };
 }
 
 export interface RetrievalChainParams {
@@ -65,9 +71,19 @@ class ChainFactory {
    * @return {RunnableSequence} the newly created LLM chain
    */
   public static createNewLLMChain(args: LLMChainInput): RunnableSequence {
-    const { llm, memory, prompt, abortController } = args;
+    const { llm, memory, prompt, abortController, maxCompletionTokens, reasoningEffort } = args;
 
-    const model = llm.bind({ signal: abortController?.signal });
+    const model = llm.bind({
+      signal: abortController?.signal,
+      ...(maxCompletionTokens && { maxTokens: maxCompletionTokens }),
+      ...(reasoningEffort && {
+        clientOptions: {
+          headers: {
+            "Helicone-Property-ReasoningEffort": reasoningEffort,
+          },
+        },
+      }),
+    });
     const instance = RunnableSequence.from([
       {
         input: (initialInput) => initialInput.input,
@@ -79,6 +95,7 @@ class ChainFactory {
       },
       prompt,
       model,
+      new StringOutputParser(),
     ]);
     ChainFactory.instances.set(ChainType.LLM_CHAIN, instance);
     console.log("New LLM chain created.");
@@ -196,6 +213,7 @@ Question: {question}
       },
       ANSWER_PROMPT,
       llm,
+      new StringOutputParser(),
     ]);
 
     const conversationalRetrievalQAChain = standaloneQuestionChain.pipe(answerChain);

@@ -181,6 +181,12 @@ export const isSupportedChain = (chain: RunnableSequence): chain is RunnableSequ
   return isLLMChain(chain) || isRetrievalQAChain(chain);
 };
 
+export function isChatCustomModel(
+  model: ChatCustomModel | EmbeddingCustomModel
+): model is ChatCustomModel {
+  return (model as ChatCustomModel).provider !== undefined;
+}
+
 // Returns the last N messages from the chat history,
 // last one being the newest ai message
 export const getChatContext = (chatHistory: ChatMessage[], contextSize: number) => {

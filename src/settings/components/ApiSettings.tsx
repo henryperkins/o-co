@@ -1,6 +1,13 @@
 import { AzureOpenAIDeployment } from "@/types";
 import { updateModelConfig } from "@/aiParams";
-import { updateSetting, useSettingsValue, validateDeployment, addAzureDeployment, updateAzureDeployment, removeAzureDeployment } from "@/settings/model";
+import {
+  updateSetting,
+  useSettingsValue,
+  validateDeployment,
+  addAzureDeployment,
+  updateAzureDeployment,
+  removeAzureDeployment,
+} from "@/settings/model";
 import React, { useEffect, useState } from "react";
 import ApiSetting from "./ApiSetting";
 import Collapsible from "./Collapsible";
@@ -17,7 +24,7 @@ export const ApiSettings: React.FC = () => {
     instanceName: "",
     apiKey: "",
     apiVersion: "",
-    isEnabled: true
+    isEnabled: true,
   });
 
   const [selectedModel] = useState<string>(settings.defaultModelKey);
@@ -56,7 +63,7 @@ export const ApiSettings: React.FC = () => {
       instanceName: "",
       apiKey: "",
       apiVersion: "",
-      isEnabled: true
+      isEnabled: true,
     });
   };
 
