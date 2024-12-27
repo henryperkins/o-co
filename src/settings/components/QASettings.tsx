@@ -6,16 +6,10 @@ import {
   ChatModelProviders,
 } from "@/constants";
 import VectorStoreManager from "@/search/vectorStoreManager";
-import { updateSetting, useSettingsValue } from "@/settings/model";
-import { App } from "obsidian";
+import { updateSetting, useSettingsValue, CopilotSettings } from "@/settings/model";
+import { App, Notice } from "obsidian";
 import React from "react";
-import {
-  DropdownComponent,
-  ModelSettingsComponent,
-  SliderComponent,
-  TextAreaComponent,
-  ToggleComponent,
-} from "./SettingBlocks";
+import { ModelSettingsComponent } from "./SettingBlocks";
 
 interface QASettingsProps {
   app: App;
@@ -37,7 +31,7 @@ const QASettings: React.FC<QASettingsProps> = ({ app, vectorStoreManager }) => {
   const handleSetDefaultEmbeddingModel = async (modelKey: string) => {
     if (modelKey !== settings.embeddingModelKey) {
       new RebuildIndexConfirmModal(app, async () => {
-        updateSetting("embeddingModelKey", modelKey);
+        await updateSetting("embeddingModelKey", modelKey);
       }).open();
     }
   };
@@ -52,8 +46,22 @@ const QASettings: React.FC<QASettingsProps> = ({ app, vectorStoreManager }) => {
     }
   };
 
+  const handleSettingChange = async <K extends keyof CopilotSettings>(
+    name: K,
+    value: CopilotSettings[K]
+  ) => {
+    try {
+      await updateSetting(name, value);
+      new Notice(`${name} updated successfully!`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error occurred";
+      console.error(`Error updating ${name}:`, error);
+      new Notice(`Error updating ${name}: ${message}`);
+    }
+  };
+
   return (
-    <div className="copilot-settings-tab">
+    <div className="settings-container">
       <h1>QA Settings</h1>
       <p>
         QA mode relies on a <em>local</em> vector index.
@@ -85,7 +93,7 @@ const QASettings: React.FC<QASettingsProps> = ({ app, vectorStoreManager }) => {
         onSetDefaultModelKey={handleSetDefaultEmbeddingModel}
         isEmbeddingModel={true}
       />
-      <h1>Auto-Index Strategy</h1>
+      <h2>Auto-Index Strategy</h2>
       <div className="warning-message">
         If you are using a paid embedding provider, beware of costs for large vaults!
       </div>
@@ -94,13 +102,31 @@ const QASettings: React.FC<QASettingsProps> = ({ app, vectorStoreManager }) => {
         <em>based on the auto-index strategy you select below</em>.
         <br />
       </p>
-      <DropdownComponent
-        name="Auto-index vault strategy"
-        description="Decide when you want the vault to be indexed."
-        value={settings.indexVaultToVectorStore}
-        onChange={(value) => updateSetting("indexVaultToVectorStore", value)}
-        options={VAULT_VECTOR_STORE_STRATEGIES}
-      />
+      <div className="setting-item">
+        <div className="setting-item-info">
+          <div className="setting-item-name">Auto-index vault strategy</div>
+          <div className="setting-item-description">
+            Decide when you want the vault to be indexed.
+          </div>
+        </div>
+        <div className="setting-item-control">
+          <select
+            value={settings.indexVaultToVectorStore}
+            onChange={(e) =>
+              handleSettingChange(
+                "indexVaultToVectorStore",
+                e.target.value as CopilotSettings["indexVaultToVectorStore"]
+              )
+            }
+          >
+            {VAULT_VECTOR_STORE_STRATEGIES.map((strategy) => (
+              <option key={strategy} value={strategy}>
+                {strategy}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
       <br />
       <p>
         <strong>NEVER</strong>: Notes are never indexed to the Copilot index unless users run the
@@ -125,74 +151,162 @@ const QASettings: React.FC<QASettingsProps> = ({ app, vectorStoreManager }) => {
         embedding model pricing to estimate indexing costs.
       </p>
       <br />
-      <SliderComponent
-        name="Max Sources"
-        description="Copilot goes through your vault to find relevant blocks and passes the top N blocks to the LLM. Default for N is 3. Increase if you want more sources included in the answer generation step. WARNING: more sources significantly degrades answer quality if the chat model is weak!"
-        min={1}
-        max={30}
-        step={1}
-        value={settings.maxSourceChunks}
-        onChange={(value) => updateSetting("maxSourceChunks", value)}
-      />
-      <SliderComponent
-        name="Requests per second"
-        description="Default is 10. Decrease if you are rate limited by your embedding provider."
-        min={1}
-        max={30}
-        step={1}
-        value={settings.embeddingRequestsPerSecond}
-        onChange={(value) => updateSetting("embeddingRequestsPerSecond", value)}
-      />
-      <DropdownComponent
-        name="Number of Partitions"
-        description="Number of partitions for Copilot index. Default is 1. Increase if you have issues indexing large vaults. Warning: Changes require clearing and rebuilding the index!"
-        value={settings.numPartitions.toString()}
-        onChange={handlePartitionsChange}
-        options={[
-          "1",
-          "2",
-          "3",
-          "4",
-          "5",
-          "6",
-          "7",
-          "8",
-          "12",
-          "16",
-          "20",
-          "24",
-          "28",
-          "32",
-          "36",
-          "40",
-        ]}
-      />
-      <TextAreaComponent
-        name="Exclusions"
-        description="Comma separated list of paths, tags, note titles or file extension, e.g. folder1, folder1/folder2, #tag1, #tag2, [[note1]], [[note2]], *.jpg, *.excallidraw.md etc, to be excluded from the indexing process. NOTE: Tags must be in the note properties, not the note content. Files which were previously indexed will remain in the index unless you force re-index."
-        placeholder="folder1, folder1/folder2, #tag1, #tag2, [[note1]], [[note2]], *.jpg, *.excallidraw.md"
-        value={settings.qaExclusions}
-        onChange={(value) => updateSetting("qaExclusions", value)}
-      />
-      <TextAreaComponent
-        name="Inclusions"
-        description="When specified, ONLY these paths, tags, or note titles will be indexed (comma separated). Files which were previously indexed will remain in the index unless you force re-index. If overlapping with exclusions, exclusions take precedence. Format: folder1, folder1/folder2, #tag1, #tag2, [[note1]], [[note2]]"
-        placeholder="folder1, #tag1, [[note1]]"
-        value={settings.qaInclusions}
-        onChange={(value) => updateSetting("qaInclusions", value)}
-      />
-      <ToggleComponent
-        name="Enable Obsidian Sync for Copilot index"
-        description="If enabled, the index will be stored in the .obsidian folder and synced with Obsidian Sync by default. If disabled, it will be stored in .copilot-index folder at vault root."
-        value={settings.enableIndexSync}
-        onChange={(value) => updateSetting("enableIndexSync", value)}
-      />
-      <ToggleComponent
-        name="Disable index loading on mobile"
-        description="When enabled, Copilot index won't be loaded on mobile devices to save resources. Only chat mode will be available. Any existing index from desktop sync will be preserved. Uncheck to enable QA modes on mobile."
-        value={settings.disableIndexOnMobile}
-        onChange={(value) => updateSetting("disableIndexOnMobile", value)}
-      />
+      <div className="setting-item">
+        <div className="setting-item-info">
+          <div className="setting-item-name">Max Sources</div>
+          <div className="setting-item-description">
+            Copilot goes through your vault to find relevant blocks and passes the top N blocks to
+            the LLM. Default for N is 3. Increase if you want more sources included in the answer
+            generation step. WARNING: more sources significantly degrades answer quality if the chat
+            model is weak!
+          </div>
+        </div>
+        <div className="setting-item-control">
+          <input
+            type="range"
+            min="1"
+            max="30"
+            step="1"
+            value={settings.maxSourceChunks}
+            onChange={(e) =>
+              handleSettingChange(
+                "maxSourceChunks",
+                parseInt(e.target.value) as CopilotSettings["maxSourceChunks"]
+              )
+            }
+          />
+          <span className="slider-value">{settings.maxSourceChunks}</span>
+        </div>
+      </div>
+      <div className="setting-item">
+        <div className="setting-item-info">
+          <div className="setting-item-name">Requests per second</div>
+          <div className="setting-item-description">
+            Default is 10. Decrease if you are rate limited by your embedding provider.
+          </div>
+        </div>
+        <div className="setting-item-control">
+          <input
+            type="range"
+            min="1"
+            max="30"
+            step="1"
+            value={settings.embeddingRequestsPerSecond}
+            onChange={(e) =>
+              handleSettingChange(
+                "embeddingRequestsPerSecond",
+                parseInt(e.target.value) as CopilotSettings["embeddingRequestsPerSecond"]
+              )
+            }
+          />
+          <span className="slider-value">{settings.embeddingRequestsPerSecond}</span>
+        </div>
+      </div>
+
+      <div className="setting-item">
+        <div className="setting-item-info">
+          <div className="setting-item-name">Number of Partitions</div>
+          <div className="setting-item-description">
+            Number of partitions for Copilot index. Default is 1. Increase if you have issues
+            indexing large vaults. Warning: Changes require clearing and rebuilding the index!
+          </div>
+        </div>
+        <div className="setting-item-control">
+          <select
+            value={settings.numPartitions.toString()}
+            onChange={(e) => handlePartitionsChange(e.target.value)}
+          >
+            {[
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "12",
+              "16",
+              "20",
+              "24",
+              "28",
+              "32",
+              "36",
+              "40",
+            ].map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <div className="setting-item">
+        <div className="setting-item-info">
+          <div className="setting-item-name">Exclusions</div>
+          <div className="setting-item-description">
+            Comma separated list of paths, tags, note titles or file extension, e.g. folder1,
+            folder1/folder2, #tag1, #tag2, [[note1]], [[note2]], *.jpg, *.excallidraw.md etc, to be
+            excluded from the indexing process. NOTE: Tags must be in the note properties, not the
+            note content. Files which were previously indexed will remain in the index unless you
+            force re-index.
+          </div>
+        </div>
+        <div className="setting-item-control">
+          <textarea
+            value={settings.qaExclusions}
+            onChange={(e) =>
+              handleSettingChange("qaExclusions", e.target.value as CopilotSettings["qaExclusions"])
+            }
+            placeholder="folder1, #tag1, [[note1]]"
+            rows={3}
+          />
+        </div>
+      </div>
+
+      <div className="setting-item">
+        <div className="setting-item-info">
+          <div className="setting-item-name">Enable Obsidian Sync for Copilot index</div>
+          <div className="setting-item-description">
+            If enabled, the index will be stored in the .obsidian folder and synced with Obsidian
+            Sync by default. If disabled, it will be stored in .copilot-index folder at vault root.
+          </div>
+        </div>
+        <div className="setting-item-control">
+          <input
+            type="checkbox"
+            checked={settings.enableIndexSync}
+            onChange={(e) =>
+              handleSettingChange(
+                "enableIndexSync",
+                e.target.checked as CopilotSettings["enableIndexSync"]
+              )
+            }
+          />
+        </div>
+      </div>
+      <div className="setting-item">
+        <div className="setting-item-info">
+          <div className="setting-item-name">Disable index loading on mobile</div>
+          <div className="setting-item-description">
+            When enabled, Copilot index won't be loaded on mobile devices to save resources. Only
+            chat mode will be available. Any existing index from desktop sync will be preserved.
+            Uncheck to enable QA modes on mobile.
+          </div>
+        </div>
+        <div className="setting-item-control">
+          <input
+            type="checkbox"
+            checked={settings.disableIndexOnMobile}
+            onChange={(e) =>
+              handleSettingChange(
+                "disableIndexOnMobile",
+                e.target.checked as CopilotSettings["disableIndexOnMobile"]
+              )
+            }
+          />
+        </div>
+      </div>
     </div>
   );
 };

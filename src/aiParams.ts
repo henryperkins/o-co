@@ -117,11 +117,16 @@ export function updateModelConfig(modelKey: string, newConfig: Partial<ModelConf
   const settings = getSettings();
   const modelConfigs = { ...settings.modelConfigs };
 
+  console.log("updateModelConfig - modelKey:", modelKey);
+  console.log("updateModelConfig - newConfig:", newConfig);
+
   if (modelKey.startsWith("o1-preview")) {
     const deploymentName = modelKey.split("|")[1] || "";
     const deployment = settings.azureOpenAIApiDeployments?.find(
       (d) => d.deploymentName === deploymentName && d.isEnabled
     );
+
+    console.log("updateModelConfig - deployment:", deployment);
 
     if (deployment) {
       newConfig = merge({}, newConfig, {
@@ -130,11 +135,28 @@ export function updateModelConfig(modelKey: string, newConfig: Partial<ModelConf
         azureOpenAIApiDeploymentName: deployment.deploymentName,
         azureOpenAIApiVersion: deployment.apiVersion,
       });
+    } else {
+      console.warn(`updateModelConfig - Azure deployment not found for model key: ${modelKey}`);
+      // Decide if you want to throw an error, use default values, or simply not update the config
     }
   }
 
   modelConfigs[modelKey] = merge({}, modelConfigs[modelKey], newConfig);
+  console.log("updateModelConfig - updated modelConfigs:", modelConfigs);
   setSettings({ ...settings, modelConfigs });
+}
+
+export async function removeModelConfig(modelKey: string): Promise<void> {
+  const settings = getSettings();
+  const modelConfigs = { ...settings.modelConfigs };
+
+  if (modelConfigs.hasOwnProperty(modelKey)) {
+    delete modelConfigs[modelKey];
+    await setSettings({ ...settings, modelConfigs });
+    console.log(`Model config removed for key: ${modelKey}`);
+  } else {
+    console.warn(`No model config found for key: ${modelKey}`);
+  }
 }
 
 export function validateAzureDeployment(deployment: AzureDeployment): boolean {

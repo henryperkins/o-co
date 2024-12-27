@@ -1052,3 +1052,100 @@ If your plugin does not need CSS, delete this file.
   color: var(--text-error);
   opacity: 1;
 }
+
+.collapsible-container {
+  border: 1px solid var(--background-modifier-border); /* Example border */
+  border-radius: var(--radius-s);
+  margin-bottom: 10px; /* Example margin */
+  padding: 10px; /* Added padding */
+}
+
+.collapsible-title {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: var(--font-bold);
+}
+
+.collapsible-icon-open,
+.collapsible-icon-closed {
+  font-size: var(--font-ui-smaller); /* Adjust as needed */
+  color: var(--text-muted); /* Example color */
+}
+
+.collapsible-content {
+  padding: 10px; /* Example padding */
+  border-top: 1px solid var(--background-modifier-border); /* Example border */
+  margin-top: 5px; /* Example margin */
+}
+
+.setting-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+}
+
+.setting-item-info {
+  flex: 1;
+}
+
+.setting-item-name {
+  font-weight: bold;
+}
+
+.setting-item-description {
+  font-size: 0.9em;
+  color: var(--text-muted);
+}
+
+.setting-item-control {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* Adjust as needed */
+}
+
+.setting-item-control input[type="text"],
+.setting-item-control input[type="password"],
+.setting-item-control input[type="number"],
+.setting-item-control select,
+.setting-item-control textarea {
+  width: 50%; /* Adjust as needed */
+  padding: 5px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--input-radius);
+}
+
+.setting-item-control input[type="checkbox"] {
+  margin-right: 0; /* Remove default margin */
+}
+
+.slider-value {
+  font-size: 0.9em;
+  color: var(--text-normal);
+  margin-left: 10px;
+}
+/* other css */
+.setting-item-control input[type="text"],
+.setting-item-control input[type="number"],
+.setting-item-control select,
+.setting-item-control textarea {
+  width: 50%;
+  padding: 5px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--input-radius);
+}
+
+.settings-container {
+  padding: 20px;
+}
+
+.settings-container > h2 {
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+
+.setting-item + .setting-item {
+  border-top: 1px solid var(--background-modifier-border);
+}

@@ -10,7 +10,7 @@ import {
   DEFAULT_SYSTEM_PROMPT,
 } from "@/constants";
 
-import { updateModelConfig } from "@/aiParams";
+import { updateModelConfig, removeModelConfig } from "@/aiParams";
 import { EmbeddingModelProviders } from "@/constants";
 
 export { DEFAULT_SETTINGS };
@@ -244,7 +244,6 @@ export const addAzureDeployment = async (deployment: AzureOpenAIDeployment): Pro
   const deployments = settings.azureOpenAIApiDeployments || [];
   const updatedDeployments = [...deployments, deployment];
   await updateSetting("azureOpenAIApiDeployments", updatedDeployments);
-  await updateDeploymentConfig(deployment);
 };
 
 export const updateAzureDeployment = async (
@@ -264,8 +263,15 @@ export const updateAzureDeployment = async (
 export const removeAzureDeployment = async (index: number): Promise<void> => {
   const settings = getSettings();
   const deployments = settings.azureOpenAIApiDeployments || [];
+  const deploymentToRemove = deployments[index];
   const updatedDeployments = deployments.filter((_, i) => i !== index);
   await updateSetting("azureOpenAIApiDeployments", updatedDeployments);
+
+  // Remove the associated modelConfig
+  if (deploymentToRemove) {
+    const modelKey = `o1-preview|${deploymentToRemove.deploymentName}`;
+    await removeModelConfig(modelKey);
+  }
 };
 
 export const validateDeployment = (deployment: AzureOpenAIDeployment): boolean => {

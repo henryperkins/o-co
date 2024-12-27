@@ -5,14 +5,13 @@ import {
   useSettingsValue,
   validateDeployment,
   addAzureDeployment,
-  updateAzureDeployment,
   removeAzureDeployment,
+  CopilotSettings,
 } from "@/settings/model";
 import React, { useEffect, useState } from "react";
-import ApiSetting from "./ApiSetting";
 import Collapsible from "./Collapsible";
-import { Notice } from "obsidian";
-import { debounce } from "lodash";
+import { Notice, debounce } from "obsidian";
+import ApiSetting from "./ApiSetting";
 
 export const ApiSettings: React.FC = () => {
   const settings = useSettingsValue();
@@ -57,29 +56,43 @@ export const ApiSettings: React.FC = () => {
     }
 
     const newDeployment = { ...defaultAzureDeployment, isEnabled: true };
-    await addAzureDeployment(newDeployment);
-
-    setDefaultAzureDeployment({
-      deploymentName: "",
-      instanceName: "",
-      apiKey: "",
-      apiVersion: "",
-      isEnabled: true,
-    });
-  };
-
-  const handleUpdateAzureDeployment = async (index: number, deployment: AzureOpenAIDeployment) => {
-    await updateAzureDeployment(index, deployment);
+    try {
+      await addAzureDeployment(newDeployment);
+      setDefaultAzureDeployment({
+        deploymentName: "",
+        instanceName: "",
+        apiKey: "",
+        apiVersion: "",
+        isEnabled: true,
+      });
+      new Notice("Azure deployment added successfully!");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error occurred";
+      console.error("Error adding Azure deployment:", error);
+      new Notice(`Error adding Azure deployment: ${message}`);
+    }
   };
 
   const handleRemoveAzureDeployment = async (index: number) => {
-    await removeAzureDeployment(index);
+    try {
+      await removeAzureDeployment(index);
+      new Notice("Azure deployment removed successfully!");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error occurred";
+      console.error("Error removing Azure deployment:", error);
+      new Notice(`Error removing Azure deployment: ${message}`);
+    }
   };
 
   // Debounce the updateModelConfig function
   const debouncedUpdateModelConfig = debounce(updateModelConfig, 300);
 
   const handleMaxCompletionTokensChange = (value: number) => {
+    if (value < 0) {
+      new Notice("Max Completion Tokens must be a non-negative number");
+      return;
+    }
+
     setMaxCompletionTokens(value);
     let modelKey = `${selectedModel}|${modelProvider}`;
     if (selectedModel === "o1-preview") {
@@ -89,6 +102,11 @@ export const ApiSettings: React.FC = () => {
   };
 
   const handleReasoningEffortChange = (value: number) => {
+    if (value < 0 || value > 100) {
+      new Notice("Reasoning Effort must be a number between 0 and 100");
+      return;
+    }
+
     setReasoningEffort(value);
     let modelKey = `${selectedModel}|${modelProvider}`;
     if (selectedModel === "o1-preview") {
@@ -97,10 +115,26 @@ export const ApiSettings: React.FC = () => {
     debouncedUpdateModelConfig(modelKey, { reasoningEffort: value });
   };
 
+  const handleSettingChange = async <K extends keyof CopilotSettings>(
+    name: K,
+    value: CopilotSettings[K]
+  ) => {
+    try {
+      await updateSetting(name, value);
+      new Notice(`${name} updated successfully!`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error occurred";
+      console.error(`Error updating ${name}:`, error);
+      new Notice(`Error updating ${name}: ${message}`);
+    }
+  };
+
   return (
-    <div>
-      <h1>API Settings</h1>
-      <p>All your API keys are stored locally.</p>
+    <div className="settings-container">
+      <div className="api-settings-header">
+        <h2>API Settings</h2>
+        <p>All your API keys are stored locally.</p>
+      </div>
       <div className="warning-message">
         Make sure you have access to the model and the correct API key.
         <br />
@@ -110,25 +144,33 @@ export const ApiSettings: React.FC = () => {
         <div>
           <ApiSetting
             title="OpenAI API Key"
+            description={
+              <>
+                You can find your API key at{" "}
+                <a
+                  href="https://platform.openai.com/api-keys"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  https://platform.openai.com/api-keys
+                </a>
+              </>
+            }
             value={settings.openAIApiKey}
-            setValue={(value) => updateSetting("openAIApiKey", value)}
+            setValue={(value) =>
+              handleSettingChange("openAIApiKey", value as CopilotSettings["openAIApiKey"])
+            }
             placeholder="Enter OpenAI API Key"
           />
-          <p>
-            You can find your API key at{" "}
-            <a
-              href="https://platform.openai.com/api-keys"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              https://platform.openai.com/api-keys
-            </a>
-          </p>
+
           <ApiSetting
             title="OpenAI Organization ID (optional)"
+            description="Enter OpenAI Organization ID if applicable"
             value={settings.openAIOrgId}
-            setValue={(value) => updateSetting("openAIOrgId", value)}
-            placeholder="Enter OpenAI Organization ID if applicable"
+            setValue={(value) =>
+              handleSettingChange("openAIOrgId", value as CopilotSettings["openAIOrgId"])
+            }
+            placeholder="Enter OpenAI Organization ID"
           />
         </div>
         <div className="warning-message">
@@ -148,70 +190,86 @@ export const ApiSettings: React.FC = () => {
         <div>
           <ApiSetting
             title="Google API Key"
+            description={
+              <>
+                If you have Google Cloud, you can get Gemini API key{" "}
+                <a
+                  href="https://makersuite.google.com/app/apikey"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  here
+                </a>
+                .
+                <br />
+                Your API key is stored locally and is only used to make requests to Google's
+                services.
+              </>
+            }
             value={settings.googleApiKey}
-            setValue={(value) => updateSetting("googleApiKey", value)}
+            setValue={(value) =>
+              handleSettingChange("googleApiKey", value as CopilotSettings["googleApiKey"])
+            }
             placeholder="Enter Google API Key"
           />
-          <p>
-            If you have Google Cloud, you can get Gemini API key{" "}
-            <a
-              href="https://makersuite.google.com/app/apikey"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              here
-            </a>
-            .
-            <br />
-            Your API key is stored locally and is only used to make requests to Google's services.
-          </p>
         </div>
       </Collapsible>
       <Collapsible title="Anthropic API Settings">
         <div>
           <ApiSetting
             title="Anthropic API Key"
+            description={
+              <>
+                If you have Anthropic API access, you can get the API key{" "}
+                <a
+                  href="https://console.anthropic.com/settings/keys"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  here
+                </a>
+                .
+                <br />
+                Your API key is stored locally and is only used to make requests to Anthropic's
+                services.
+              </>
+            }
             value={settings.anthropicApiKey}
-            setValue={(value) => updateSetting("anthropicApiKey", value)}
+            setValue={(value) =>
+              handleSettingChange("anthropicApiKey", value as CopilotSettings["anthropicApiKey"])
+            }
             placeholder="Enter Anthropic API Key"
           />
-          <p>
-            If you have Anthropic API access, you can get the API key{" "}
-            <a
-              href="https://console.anthropic.com/settings/keys"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              here
-            </a>
-            .
-            <br />
-            Your API key is stored locally and is only used to make requests to Anthropic's
-            services.
-          </p>
         </div>
       </Collapsible>
       <Collapsible title="OpenRouter.ai API Settings">
         <div>
           <ApiSetting
             title="OpenRouter AI API Key"
+            description={
+              <>
+                You can get your OpenRouterAI key{" "}
+                <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer">
+                  here
+                </a>
+                .
+                <br />
+                Find models{" "}
+                <a href="https://openrouter.ai/models" target="_blank" rel="noopener noreferrer">
+                  here
+                </a>
+                .
+              </>
+            }
             value={settings.openRouterAiApiKey}
-            setValue={(value) => updateSetting("openRouterAiApiKey", value)}
+            setValue={(value) =>
+              handleSettingChange(
+                "openRouterAiApiKey",
+                value as CopilotSettings["openRouterAiApiKey"]
+              )
+            }
             placeholder="Enter OpenRouter AI API Key"
           />
-          <p>
-            You can get your OpenRouterAI key{" "}
-            <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer">
-              here
-            </a>
-            .
-            <br />
-            Find models{" "}
-            <a href="https://openrouter.ai/models" target="_blank" rel="noopener noreferrer">
-              here
-            </a>
-            .
-          </p>
         </div>
       </Collapsible>
       <Collapsible title="Azure OpenAI API Settings">
@@ -222,100 +280,114 @@ export const ApiSettings: React.FC = () => {
                 title="Deployment Name"
                 value={deployment.deploymentName}
                 setValue={(value) =>
-                  handleUpdateAzureDeployment(index, {
-                    ...deployment,
-                    deploymentName: value,
-                  })
+                  handleSettingChange(
+                    "azureOpenAIApiDeployments",
+                    azureDeployments.map((d, i) =>
+                      i === index ? { ...d, deploymentName: value } : d
+                    ) as CopilotSettings["azureOpenAIApiDeployments"]
+                  )
                 }
                 placeholder="Enter Deployment Name"
-                type="text"
               />
+
               <ApiSetting
                 title="Instance Name"
                 value={deployment.instanceName}
                 setValue={(value) =>
-                  handleUpdateAzureDeployment(index, {
-                    ...deployment,
-                    instanceName: value,
-                  })
+                  handleSettingChange(
+                    "azureOpenAIApiDeployments",
+                    azureDeployments.map((d, i) =>
+                      i === index ? { ...d, instanceName: value } : d
+                    ) as CopilotSettings["azureOpenAIApiDeployments"]
+                  )
                 }
                 placeholder="Enter Instance Name"
-                type="text"
               />
+
               <ApiSetting
                 title="API Key"
                 value={deployment.apiKey}
                 setValue={(value) =>
-                  handleUpdateAzureDeployment(index, {
-                    ...deployment,
-                    apiKey: value,
-                  })
+                  handleSettingChange(
+                    "azureOpenAIApiDeployments",
+                    azureDeployments.map((d, i) =>
+                      i === index ? { ...d, apiKey: value } : d
+                    ) as CopilotSettings["azureOpenAIApiDeployments"]
+                  )
                 }
                 placeholder="Enter API Key"
                 type="password"
               />
+
               <ApiSetting
                 title="API Version"
                 value={deployment.apiVersion}
                 setValue={(value) =>
-                  handleUpdateAzureDeployment(index, {
-                    ...deployment,
-                    apiVersion: value,
-                  })
+                  handleSettingChange(
+                    "azureOpenAIApiDeployments",
+                    azureDeployments.map((d, i) =>
+                      i === index ? { ...d, apiVersion: value } : d
+                    ) as CopilotSettings["azureOpenAIApiDeployments"]
+                  )
                 }
                 placeholder="Enter API Version"
-                type="text"
               />
+
               <button className="mod-cta" onClick={() => handleRemoveAzureDeployment(index)}>
                 Remove
               </button>
             </div>
           ))}
           <div className="api-setting">
-            <input
-              type="text"
-              placeholder="Enter Deployment Name"
+            <ApiSetting
+              title="Deployment Name"
               value={defaultAzureDeployment.deploymentName}
-              onChange={(e) =>
+              setValue={(value) =>
                 setDefaultAzureDeployment({
                   ...defaultAzureDeployment,
-                  deploymentName: e.target.value,
+                  deploymentName: value,
                 })
               }
+              placeholder="Enter Deployment Name"
             />
-            <input
-              type="text"
-              placeholder="Enter Instance Name"
+
+            <ApiSetting
+              title="Instance Name"
               value={defaultAzureDeployment.instanceName}
-              onChange={(e) =>
+              setValue={(value) =>
                 setDefaultAzureDeployment({
                   ...defaultAzureDeployment,
-                  instanceName: e.target.value,
+                  instanceName: value,
                 })
               }
+              placeholder="Enter Instance Name"
             />
-            <input
-              type="password"
-              placeholder="Enter API Key"
+
+            <ApiSetting
+              title="API Key"
               value={defaultAzureDeployment.apiKey}
-              onChange={(e) =>
+              setValue={(value) =>
                 setDefaultAzureDeployment({
                   ...defaultAzureDeployment,
-                  apiKey: e.target.value,
+                  apiKey: value,
                 })
               }
+              placeholder="Enter API Key"
+              type="password"
             />
-            <input
-              type="text"
-              placeholder="Enter API Version"
+
+            <ApiSetting
+              title="API Version"
               value={defaultAzureDeployment.apiVersion}
-              onChange={(e) =>
+              setValue={(value) =>
                 setDefaultAzureDeployment({
                   ...defaultAzureDeployment,
-                  apiVersion: e.target.value,
+                  apiVersion: value,
                 })
               }
+              placeholder="Enter API Version"
             />
+
             <button className="mod-cta" onClick={handleAddAzureDeployment}>
               Add Deployment
             </button>
@@ -327,10 +399,18 @@ export const ApiSettings: React.FC = () => {
           <ApiSetting
             title="Max Completion Tokens"
             value={maxCompletionTokens?.toString() || ""}
-            setValue={(value) => handleMaxCompletionTokensChange(Number(value))}
+            setValue={(value) => {
+              const numValue = Number(value);
+              if (isNaN(numValue) || numValue < 0) {
+                new Notice("Max Completion Tokens must be a non-negative number");
+                return;
+              }
+              handleMaxCompletionTokensChange(numValue);
+            }}
             placeholder="Enter Max Completion Tokens"
             type="number"
           />
+
           <select
             value={selectedDeployment}
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
@@ -347,11 +427,19 @@ export const ApiSettings: React.FC = () => {
               </option>
             ))}
           </select>
+
           {azureDeployments.length > 0 && selectedDeployment !== "" && (
             <ApiSetting
               title="Reasoning Effort"
               value={reasoningEffort?.toString() || ""}
-              setValue={(value) => handleReasoningEffortChange(Number(value))}
+              setValue={(value) => {
+                const numValue = Number(value);
+                if (isNaN(numValue) || numValue < 0 || numValue > 100) {
+                  new Notice("Reasoning Effort must be a number between 0 and 100");
+                  return;
+                }
+                handleReasoningEffortChange(numValue);
+              }}
               placeholder="Enter Reasoning Effort (0-100)"
               type="number"
             />
@@ -362,35 +450,45 @@ export const ApiSettings: React.FC = () => {
         <div>
           <ApiSetting
             title="Groq API Key"
+            description={
+              <>
+                If you have Groq API access, you can get the API key{" "}
+                <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer">
+                  here
+                </a>
+                .
+                <br />
+                Your API key is stored locally and is only used to make requests to Groq's services.
+              </>
+            }
             value={settings.groqApiKey}
-            setValue={(value) => updateSetting("groqApiKey", value)}
+            setValue={(value) =>
+              handleSettingChange("groqApiKey", value as CopilotSettings["groqApiKey"])
+            }
             placeholder="Enter Groq API Key"
           />
-          <p>
-            If you have Groq API access, you can get the API key{" "}
-            <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer">
-              here
-            </a>
-            .
-            <br />
-            Your API key is stored locally and is only used to make requests to Groq's services.
-          </p>
         </div>
       </Collapsible>
       <Collapsible title="Cohere API Settings">
         <ApiSetting
           title="Cohere API Key"
+          description={
+            <>
+              Get your free Cohere API key{" "}
+              <a href="https://dashboard.cohere.ai/api-keys" target="_blank" rel="noreferrer">
+                here
+              </a>
+            </>
+          }
           value={settings.cohereApiKey}
-          setValue={(value) => updateSetting("cohereApiKey", value)}
+          setValue={(value) =>
+            handleSettingChange("cohereApiKey", value as CopilotSettings["cohereApiKey"])
+          }
           placeholder="Enter Cohere API Key"
         />
-        <p>
-          Get your free Cohere API key{" "}
-          <a href="https://dashboard.cohere.ai/api-keys" target="_blank" rel="noreferrer">
-            here
-          </a>
-        </p>
       </Collapsible>
     </div>
   );
 };
+
+export default ApiSettings;

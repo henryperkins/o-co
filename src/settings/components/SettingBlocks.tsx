@@ -1,7 +1,7 @@
-import { CustomModel, ChatCustomModel, EmbeddingCustomModel } from "../../types";
+import { CustomModel, ChatCustomModel, EmbeddingCustomModel } from "@/types";
 import { EmbeddingModelProviders, ChatModelProviders } from "@/constants";
-import ChatModelManager from "../../LLMProviders/chatModelManager";
-import EmbeddingManager from "../../LLMProviders/embeddingManager";
+import ChatModelManager from "@/LLMProviders/chatModelManager";
+import EmbeddingManager from "@/LLMProviders/embeddingManager";
 import { App, Notice } from "obsidian";
 import React, { useEffect, useState } from "react";
 
@@ -12,183 +12,10 @@ const isEmbeddingCustomModel = (
   return Object.values(EmbeddingModelProviders).includes(model.provider as EmbeddingModelProviders);
 };
 
-type DropdownComponentProps = {
-  name: string;
-  description?: string;
-  options: string[];
-  value: string;
-  onChange: (value: string) => void;
-};
-
-type TextComponentProps = {
-  name: string;
-  description?: string;
-  placeholder: string;
-  value: string;
-  type?: string;
-  onChange: (value: string) => void;
-};
-
-type TextAreaComponentProps = {
-  name: string;
-  description?: string;
-  placeholder: string;
-  value: string;
-  onChange: (value: string) => void;
-  rows?: number;
-};
-
-type SliderComponentProps = {
-  name: string;
-  description?: React.ReactNode;
-  min: number;
-  max: number;
-  step: number;
-  value: number;
-  onChange: (value: number) => void;
-};
-
-type ToggleComponentProps = {
-  name: string;
-  description?: string;
-  value: boolean;
-  onChange: (value: boolean) => void;
-  disabled?: boolean;
-};
-
-const DropdownComponent: React.FC<DropdownComponentProps> = ({
-  name,
-  description,
-  options,
-  value,
-  onChange,
-}) => {
-  return (
-    <div className="copilot-setting-item">
-      <div className="copilot-setting-item-name">{name}</div>
-      <div className="copilot-setting-item-description">{description}</div>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="copilot-setting-item-control"
-      >
-        {options.map((option, index) => (
-          <option key={index} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-};
-
-const TextComponent: React.FC<TextComponentProps> = ({
-  name,
-  description,
-  placeholder,
-  value,
-  type,
-  onChange,
-}) => {
-  return (
-    <div className="copilot-setting-item">
-      <div className="copilot-setting-item-name">{name}</div>
-      <div className="copilot-setting-item-description">{description}</div>
-      <input
-        type={type || "text"}
-        className="copilot-setting-item-control"
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      />
-    </div>
-  );
-};
-
-const TextAreaComponent: React.FC<TextAreaComponentProps> = ({
-  name,
-  description,
-  placeholder,
-  value,
-  onChange,
-  rows = 3,
-}) => {
-  return (
-    <div className="copilot-setting-item">
-      <div className="copilot-setting-item-name">{name}</div>
-      <div className="copilot-setting-item-description">{description}</div>
-      <textarea
-        className="copilot-setting-item-control"
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        rows={rows}
-      />
-    </div>
-  );
-};
-
-const SliderComponent: React.FC<SliderComponentProps> = ({
-  name,
-  description,
-  min,
-  max,
-  step,
-  value,
-  onChange,
-}) => {
-  return (
-    <div className="copilot-setting-item">
-      <div className="copilot-setting-item-name">{name}</div>
-      <div className="copilot-setting-item-description">{description}</div>
-      <div style={{ display: "flex", alignItems: "center" }}>
-        <input
-          type="range"
-          className="copilot-setting-item-control"
-          min={min}
-          max={max}
-          step={step}
-          value={value}
-          onChange={(e) => onChange(parseFloat(e.target.value))}
-        />
-        <span
-          style={{ marginLeft: "20px", fontWeight: "bold", color: "var(--inline-title-color)" }}
-        >
-          {value}
-        </span>
-      </div>
-    </div>
-  );
-};
-
-const ToggleComponent: React.FC<ToggleComponentProps> = ({
-  name,
-  description,
-  value,
-  onChange,
-  disabled = false,
-}) => {
-  return (
-    <div className="copilot-setting-item">
-      {name && <div className="copilot-setting-item-name">{name}</div>}
-      {description && <div className="copilot-setting-item-description">{description}</div>}
-      <label className={`switch ${disabled ? "disabled" : ""}`}>
-        <input
-          type="checkbox"
-          checked={value}
-          onChange={(e) => onChange(e.target.checked)}
-          disabled={disabled}
-        />
-        <span className="slider round"></span>
-      </label>
-    </div>
-  );
-};
-
 const ModelCard: React.FC<{
   model: CustomModel;
   isDefault: boolean;
-  onSetDefault: () => void;
+  onSetDefault: (model: CustomModel) => void;
   onToggleEnabled: (value: boolean) => void;
   onToggleCors: (value: boolean) => void;
   onDelete?: () => void;
@@ -201,49 +28,47 @@ const ModelCard: React.FC<{
   }, [isDefault]);
 
   return (
-    <div className={`model-card ${isExpanded ? "expanded" : ""} ${isDefault ? "selected" : ""}`}>
-      {!isDefault && onDelete && (
-        <button
-          className="model-delete-icon"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete();
-          }}
-          aria-label="Delete model"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M3 6h18M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M10 11v6M14 11v6M5 6v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6H5z" />
-          </svg>
-        </button>
-      )}
-
-      <div
-        className="model-card-header"
-        onClick={(e) => {
-          e.stopPropagation();
-          setIsExpanded(!isExpanded);
-          onSetDefault();
-        }}
-      >
+    <div
+      className={`model-card ${isExpanded ? "expanded" : ""} ${isDefault ? "selected" : ""}`}
+      onClick={(e) => {
+        e.stopPropagation();
+        setIsExpanded(!isExpanded);
+        onSetDefault(model);
+      }}
+    >
+      <div className="model-card-header">
         <div className="model-card-header-content">
-          <div>
-            <span className="expand-icon">{isExpanded ? "▼" : "▶"}</span>
-          </div>
-          <div className="model-provider-wrapper">
-            <h3 className="model-card-title">{model.name}</h3>
-            <span className="model-provider">{model.provider}</span>
-          </div>
+          <span className="model-name" title={model.name}>
+            {model.name}
+          </span>
+          <span className="model-provider" title={model.provider}>
+            {model.provider}
+          </span>
         </div>
+        {onDelete && (
+          <button
+            className="model-delete-icon"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            aria-label="Delete model"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M3 6h18M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M10 11v6M14 11v6M5 6v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6H5z" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {isExpanded && (
@@ -251,10 +76,10 @@ const ModelCard: React.FC<{
           <div className="model-card-controls">
             <div className="model-card-item">
               <span>Enabled</span>
-              <ToggleComponent
-                name=""
-                value={model.enabled}
-                onChange={onToggleEnabled}
+              <input
+                type="checkbox"
+                checked={model.enabled}
+                onChange={(e) => onToggleEnabled(e.target.checked)}
                 disabled={disabled}
               />
             </div>
@@ -262,10 +87,10 @@ const ModelCard: React.FC<{
             {!model.isBuiltIn && (
               <div className="model-card-item">
                 <span>CORS</span>
-                <ToggleComponent
-                  name=""
-                  value={model.enableCors || false}
-                  onChange={onToggleCors}
+                <input
+                  type="checkbox"
+                  checked={model.enableCors || false}
+                  onChange={(e) => onToggleCors(e.target.checked)}
                 />
               </div>
             )}
@@ -283,7 +108,7 @@ interface ModelSettingsComponentProps {
   providers: Array<ChatModelProviders | EmbeddingModelProviders>;
   onDeleteModel: (modelKey: string) => void;
   defaultModelKey: string;
-  onSetDefaultModelKey: (modelKey: string) => void;
+  onSetDefaultModelKey: (modelKey: string) => Promise<void>;
   isEmbeddingModel: boolean;
 }
 
@@ -318,8 +143,8 @@ const ModelSettingsComponent: React.FC<ModelSettingsComponentProps> = ({
 
   const getModelKey = (model: CustomModel) => `${model.name}|${model.provider}`;
 
-  const handleSetDefaultModel = (model: CustomModel) => {
-    onSetDefaultModelKey(getModelKey(model));
+  const handleSetDefaultModel = async (model: CustomModel) => {
+    await onSetDefaultModelKey(getModelKey(model));
   };
 
   const handleAddModel = () => {
@@ -392,13 +217,16 @@ const ModelSettingsComponent: React.FC<ModelSettingsComponentProps> = ({
                 <td>{model.name}</td>
                 <td>{model.provider}</td>
                 <td>
-                  <ToggleComponent
-                    name={""}
-                    value={model.enabled}
-                    onChange={(value) => {
+                  <input
+                    type="checkbox"
+                    name="modelEnabled"
+                    checked={model.enabled}
+                    onChange={(e) => {
+                      const isChecked = e.target.checked;
                       if (!model.isBuiltIn) {
-                        const updatedModels = [...activeModels];
-                        updatedModels[index].enabled = value;
+                        const updatedModels = activeModels.map((m, i) =>
+                          i === index ? { ...m, enabled: isChecked } : m
+                        );
                         onUpdateModels(updatedModels);
                       }
                     }}
@@ -407,12 +235,15 @@ const ModelSettingsComponent: React.FC<ModelSettingsComponentProps> = ({
                 </td>
                 <td>
                   {!model.isBuiltIn && (
-                    <ToggleComponent
-                      name={""}
-                      value={model.enableCors || false}
-                      onChange={(value) => {
-                        const updatedModels = [...activeModels];
-                        updatedModels[index].enableCors = value;
+                    <input
+                      type="checkbox"
+                      name="modelCors"
+                      checked={model.enableCors || false}
+                      onChange={(e) => {
+                        const isChecked = e.target.checked;
+                        const updatedModels = activeModels.map((m, i) =>
+                          i === index ? { ...m, enableCors: isChecked } : m
+                        );
                         onUpdateModels(updatedModels);
                       }}
                     />
@@ -430,22 +261,28 @@ const ModelSettingsComponent: React.FC<ModelSettingsComponentProps> = ({
 
         {/* Mobile View */}
         <div className="model-cards-container mobile-only">
-          {activeModels.map((model, index) => (
+          {activeModels.map((model) => (
             <ModelCard
               key={getModelKey(model)}
               model={model}
               isDefault={getModelKey(model) === defaultModelKey}
-              onSetDefault={() => handleSetDefaultModel(model)}
+              onSetDefault={handleSetDefaultModel}
               onToggleEnabled={(value) => {
                 if (!model.isBuiltIn) {
-                  const updatedModels = [...activeModels];
-                  updatedModels[index].enabled = value;
+                  const updatedModels = activeModels.map((m) =>
+                    m.name === model.name && m.provider === model.provider
+                      ? { ...m, enabled: value }
+                      : m
+                  );
                   onUpdateModels(updatedModels);
                 }
               }}
               onToggleCors={(value) => {
-                const updatedModels = [...activeModels];
-                updatedModels[index].enableCors = value;
+                const updatedModels = activeModels.map((m) =>
+                  m.name === model.name && m.provider === model.provider
+                    ? { ...m, enableCors: value }
+                    : m
+                );
                 onUpdateModels(updatedModels);
               }}
               onDelete={() => onDeleteModel(getModelKey(model))}
@@ -454,102 +291,59 @@ const ModelSettingsComponent: React.FC<ModelSettingsComponentProps> = ({
           ))}
         </div>
       </div>
-      <div className="add-custom-model">
-        <h2 onClick={() => setIsAddModelOpen(!isAddModelOpen)} style={{ cursor: "pointer" }}>
-          Add Custom Model {isAddModelOpen ? "▼" : "▶"}
-        </h2>
-        {isAddModelOpen && (
-          <div className="add-custom-model-form">
-            <TextComponent
-              name="Model Name"
-              description={`The name of the model, i.e. ${isEmbeddingModel ? "text-embedding-3-small" : "gpt-4o-mini"}`}
-              value={newModel.name}
-              placeholder="Enter model name"
-              onChange={(value) => {
-                setNewModel({ ...newModel, name: value });
-              }}
-            />
-            <DropdownComponent
-              name="Provider"
-              options={providers.map((p) => p.toString())}
-              value={newModel.provider}
-              onChange={(value) => {
-                setNewModel({
-                  ...newModel,
-                  provider: value as ChatModelProviders | EmbeddingModelProviders,
-                });
-              }}
-            />
-            <TextComponent
-              name="Base URL (optional)"
-              description="For 3rd party OpenAI Format endpoints only. Leave blank for other providers."
-              value={newModel.baseUrl || ""}
-              placeholder="https://api.example.com/v1"
-              onChange={(value) => setNewModel({ ...newModel, baseUrl: value })}
-            />
-            <TextComponent
-              name="API Key (optional)"
-              description="API key for the 3rd party provider"
-              value={newModel.apiKey || ""}
-              placeholder="Enter API key"
-              type="password"
-              onChange={(value) => setNewModel({ ...newModel, apiKey: value })}
-            />
-            <div style={{ marginTop: "20px" }}>
-              <div
-                style={{
-                  marginBottom: "10px",
-                  color: "var(--text-muted)",
-                  fontSize: "0.9em",
-                }}
-              >
-                Verify the connection before adding the model to ensure it's properly configured and
-                accessible.
-              </div>
-              <div style={{ display: "flex", gap: "10px" }}>
-                <button
-                  onClick={handleVerifyModel}
-                  style={{
-                    backgroundColor: "var(--interactive-accent)",
-                    color: "var(--text-on-accent)",
-                    padding: "8px 16px",
-                    borderRadius: "4px",
-                    cursor: isVerifying ? "not-allowed" : "pointer",
-                    border: "none",
-                    opacity: isVerifying ? 0.6 : 1,
-                  }}
-                  disabled={isVerifying}
-                >
-                  {isVerifying ? "Verifying..." : "Verify Connection"}
-                </button>
-                <button
-                  onClick={handleAddModel}
-                  style={{
-                    backgroundColor: "var(--interactive-accent)",
-                    color: "var(--text-on-accent)",
-                    padding: "8px 16px",
-                    borderRadius: "4px",
-                    cursor: isVerifying ? "not-allowed" : "pointer",
-                    opacity: isVerifying ? 0.6 : 1,
-                  }}
-                  disabled={isVerifying}
-                >
-                  Add Model
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+      <div className="add-custom-model" onClick={() => setIsAddModelOpen(!isAddModelOpen)}>
+        <h2>Add Custom Model {isAddModelOpen ? "▼" : "▶"}</h2>
       </div>
+      {isAddModelOpen && (
+        <div className="add-custom-model-form">
+          <input
+            type="text"
+            className="model-name-input"
+            placeholder="Enter model name"
+            value={newModel.name}
+            onChange={(e) => setNewModel({ ...newModel, name: e.target.value })}
+          />
+          <select
+            value={newModel.provider}
+            onChange={(e) =>
+              setNewModel({
+                ...newModel,
+                provider: e.target.value as ChatModelProviders | EmbeddingModelProviders,
+              })
+            }
+          >
+            {providers.map((p) => (
+              <option key={p.toString()} value={p.toString()}>
+                {p.toString()}
+              </option>
+            ))}
+          </select>
+          <input
+            type="text"
+            className="base-url-input"
+            placeholder="https://api.example.com/v1 (optional)"
+            value={newModel.baseUrl || ""}
+            onChange={(e) => setNewModel({ ...newModel, baseUrl: e.target.value })}
+          />
+          <input
+            type="password"
+            className="api-key-input"
+            placeholder="Enter API key (optional)"
+            value={newModel.apiKey || ""}
+            onChange={(e) => setNewModel({ ...newModel, apiKey: e.target.value })}
+          />
+          <div className="verification-button-container">
+            <button onClick={handleVerifyModel} disabled={isVerifying}>
+              {isVerifying ? "Verifying..." : "Verify Connection"}
+            </button>
+            <button onClick={handleAddModel} disabled={isVerifying}>
+              Add Model
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-export {
-  DropdownComponent,
-  ModelSettingsComponent,
-  SliderComponent,
-  TextAreaComponent,
-  TextComponent,
-  ToggleComponent,
-};
+export { ModelSettingsComponent };
