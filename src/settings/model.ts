@@ -293,3 +293,23 @@ export const updateDeploymentConfig = async (deployment: AzureOpenAIDeployment):
     azureOpenAIApiVersion: deployment.apiVersion,
   });
 };
+
+// Add detailed error messages and suggestions for fixing issues when invalid configurations are detected
+export function validateModelConfig(config: Partial<ModelConfig>): void {
+  if (config.maxCompletionTokens !== undefined && config.maxCompletionTokens < 0) {
+    const errorMessage = "maxCompletionTokens must be a non-negative number";
+    console.error(errorMessage);
+    throw new Error(errorMessage);
+  }
+
+  if (config.reasoningEffort !== undefined && (config.reasoningEffort < 0 || config.reasoningEffort > 100)) {
+    const errorMessage = "reasoningEffort must be a number between 0 and 100";
+    console.error(errorMessage);
+    throw new Error(errorMessage);
+  }
+}
+
+// Provide a log of configuration changes and errors for users to review their configuration history and identify issues
+export function logConfigurationChange(modelKey: string, newConfig: Partial<ModelConfig>): void {
+  console.log(`Configuration change for modelKey: ${modelKey}`, newConfig);
+}
