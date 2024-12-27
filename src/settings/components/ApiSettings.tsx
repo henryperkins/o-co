@@ -398,6 +398,7 @@ export const ApiSettings: React.FC = () => {
         <div>
           <ApiSetting
             title="Max Completion Tokens"
+            description="Specify the maximum number of tokens for completion."
             value={maxCompletionTokens?.toString() || ""}
             setValue={(value) => {
               const numValue = Number(value);
@@ -431,6 +432,7 @@ export const ApiSettings: React.FC = () => {
           {azureDeployments.length > 0 && selectedDeployment !== "" && (
             <ApiSetting
               title="Reasoning Effort"
+              description="Specify the reasoning effort (0-100)."
               value={reasoningEffort?.toString() || ""}
               setValue={(value) => {
                 const numValue = Number(value);

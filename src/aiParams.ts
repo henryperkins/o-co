@@ -141,6 +141,20 @@ export function updateModelConfig(modelKey: string, newConfig: Partial<ModelConf
     }
   }
 
+  // Validate maxCompletionTokens
+  if (newConfig.maxCompletionTokens !== undefined && newConfig.maxCompletionTokens < 0) {
+    const errorMessage = "maxCompletionTokens must be a non-negative number";
+    console.error(errorMessage);
+    throw new Error(errorMessage);
+  }
+
+  // Validate reasoningEffort
+  if (newConfig.reasoningEffort !== undefined && (newConfig.reasoningEffort < 0 || newConfig.reasoningEffort > 100)) {
+    const errorMessage = "reasoningEffort must be a number between 0 and 100";
+    console.error(errorMessage);
+    throw new Error(errorMessage);
+  }
+
   modelConfigs[modelKey] = merge({}, modelConfigs[modelKey], newConfig);
   console.log("updateModelConfig - updated modelConfigs:", modelConfigs);
   setSettings({ ...settings, modelConfigs });
